@@ -1,0 +1,214 @@
+---
+title: An R markdown template for Elsevier journals with examples for beginners 
+author:
+  - name: Paul Raftery 
+    email: p.raftery@berkeley.edu
+    affiliation: CBE
+    footnote: Corresponding Author
+  - name: Next contributor 
+    affiliation: Organisation2
+address:
+  - code: CBE
+    address: Center for the Built Environment, UC Berkeley, 390 Wurster Hall, Berkeley, CA, 94720, USA
+  - code: Organisation2
+    address: Another organization, and their address
+
+abstract: Enter the text for your abstract here
+journal: "Building and Environment"
+date: "`r Sys.Date()`"
+bibliography: Bibliography.bib
+output:
+  bookdown::pdf_book:
+    base_format: rticles::elsevier_article
+csl: elsevier-with-titles.csl
+geometry: "left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm"
+header-includes:
+- \usepackage{setspace}
+- \doublespacing
+---
+
+``` {r setup, echo=FALSE, cache=FALSE, results="hide", message=FALSE}
+## code chunk for libraries and global settings (e.g. applies to the whole markdown file)
+require(pander)
+require(tidyverse)
+require(ggExtra)
+require(gridExtra)
+require(here)
+require(readxl)
+require(broom)
+require(knitr)
+require(stargazer)
+require(RColorBrewer)
+require(ggrepel)
+require(ggpmisc)
+
+## numbers >= 10^5 will be denoted in scientific notation,
+## and rounded to 2 digits
+options(scipen = 1, digits = 2)
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, fig.pos = 'h')
+
+
+# set the gplot theme
+theme_set(theme_light())
+# update theme to lighten grey background, use black text, and 
+# rotate text appropriately for facets as default
+theme_update(strip.background = element_rect(fill="#F5F5F5", color="grey"),
+             # remove background entirely with strip.background = element_blank(),
+             strip.text = element_text(color = 'black'),
+             strip.text.y = element_text(angle = 90))
+
+# 2 print and color blind safe color options from UC Berkeley's official color palette.
+cal_palette2 <- c("#3B7EA1", "#C4820E")
+# 4 color version, with slight mod to original dark yellow for better grayscale performance 
+cal_palette4 <- c("#003262", "#b0750c", "#3b7ea1", "#fdb515")
+```
+
+``` {r readSourceData, results="hide"}
+#read your source dataset(s) from subfolder
+# df <- read_csv(here("Paper","SupplementaryMaterial","RawData","all_test_data_and_metadata.csv"), guess_max=100000)
+```
+
+``` {r preprocessData, echo=FALSE, results="hide"}
+# here is where all the preprocessing happens
+#
+# ensure you comment any sections or functions in sufficient detail that
+# their purpose can be readily understood without reading through the detail 
+# of the code itself
+```
+
+
+Keywords\:  
+Key 1\; Key 2\; Key 3\; Key 4\; Key 5\; Key 6 (max)
+
+\pagebreak
+
+**Highlights\:**  
+
+-   Add your 3 -5 highlights
+-   As bullets here
+-   Making sure each is less than 85 characters in length
+
+**Graphical Abstract**  
+```{r graphabs, message=FALSE}
+#include a graphical abstract, without a caption
+include_graphics(here("Paper","SupplementaryMaterial","Figures","Latex_logo.png"))
+
+# note the use of the here package (https://github.com/r-lib/here). This package allows you to define any filepath relative to an (empty) .here file, which means no more messing around changing filepaths!
+
+# If there are spaces in your filepath above, the filepath prints just before the picture. While there are other ways to avoid this, the easy solution is not to use spaces in your folders or files.
+```
+
+\pagebreak
+   
+# Introduction
+The purpose of this (very much work-in-progress) document is to provide a complete R markdown template for an Elsevier journal submission (based on the rticles repository @LaTeXJournalArticle2019), along with useful examples and packages to improve usability for folks who are just starting out with this workflow. The eventual intent is to capture minimal examples of the common things that authors need to do when writing papers in R markdown; provide examples of useful packages, workflows, and tools; and provide solutions to common issues that folks encounter.
+
+# Examples
+# Heading level 1
+## Heading level 2
+### Heading level 3
+Here's how to **bold** or *italic* a piece of text.
+
+This is how you do a bullet point list:
+
+* First bullet
+* Second bullet
+    + A sub-bullet
+    + Another sub-bullet
+
+Or an ordered option:
+
+1. Item 1
+2. Item 2
+    + Item 2a
+    + Item 2b
+
+## Citations
+Citing other literature is remarkably easy, just like this @coakleyReviewMethodsMatch2014. This citation key references the tag associated with an entry in Bibliography.bib (a BibTex file). I've found it easiest to use Zotero to manage my library of references and to generate the BibTex file, though any software that creates a valid BibTex file should work fine. Zotero allows you to create a 'Collection' (or folder) that gathers together all of the references used for a particular document. When combined with with the Better BibTex plugin, that collection can be exported to a BibTex file that is continually updated as you add or edit references in that Collection. Better BibTex also puts the citation key - the text after the '\@' sybmbol in the .Rmd file - on the upper right of each entry, which is convenient for adding citations. 
+
+There's not much else involved in citing, as the references list gets built and formatted automatically based on the selected style. The only other issue I've had to look around to solve was figuring out how to combine multiple citations, which is easy when you know how. [@coakleyReviewMethodsMatch2014; @zhaiHumanComfortPerceived2015a]
+
+## Cross-referencing
+This is how you refer to a figure in your text: Figure \@ref(fig:correlation). Simply reference the title of the code chunk, and ensure that the code chunk includes a figure caption.
+
+```{r correlation, fig.width = 1, fig.cap = "Correlation. Source: XKCD, xkcd.com/552"}
+include_graphics(here("Paper","SupplementaryMaterial","Figures","Correlation.png"), dpi= 500)
+```
+
+## Calculations in text
+The holy grail of markdown - doing all of your calculations in the same file so you never need to worry about updating them after someone[^footnoteApology] asks you to make changes.... again! It's as easy as pi: `r pi`. Incidentally,you can selectively override the 'global' options set at the beginning, to say for example, show more decimals: `r format(pi, digits=5)`.
+
+[^footnoteApology]: Often I'm the someone, sorry CBE grad students. Also, look, it's an example of a footnote!
+
+``` {r calculationOnlyChunk, results="hide"}
+# do some calcs here, but don't output anything to the reader, 
+# simply save the result for later use or reference in text
+xyz = 18*2
+```
+
+This is an example of outputing the result of a calculation that you perform within a code chunk in the document somewhere prior to the location where you first refer to it: `r xyz`.
+
+## Other packages
+Here are lots of packages that are useful for markdown docs. I encourage you to search for these whenever you encounter a new thing you need to do and to propose an addition to this repository accordingly. For example, the Stargazer package describes linear models in a nice table.
+
+``` {r linmods, results='asis', echo=FALSE, warning=FALSE}
+lm1 = lm(hwy ~ displ + cyl + year, mpg)
+lm2 = lm(cty ~ displ + cyl + year, mpg)
+# uncomment next line for printing in console (i.e. human readable in RStudio)
+#stargazer(lm1, lm2, type="text")
+stargazer(lm1, lm2, dep.var.labels=c("Highway","City"), covariate.labels=c("Displacement","Num. cylinders", "Year"), title = "Car miles per gallon", column.sep.width = "1pt", header=FALSE)
+```
+
+## Equations and math
+Here's a basic example inline $example_{subscript} = \frac{D}{R}$, or you display it on a whole line if needed. Google latex math cheat sheets for more information.
+
+$$\sum_{i=1}^{n}{x_i^2}$$
+
+# Writing style
+This is a little off topic for an Rmd example but a convenient place to remind our grad students about writing style. In almost all cases, active voice is better than passive voice. Several psychological studies show that the active voice is more easily understood by readers, and that information is more accurately reported by authors when writing in active voice. For example, research @klenbortMarkednessPerspectiveInterpretation1974 has shown that the “active [voice] offers a neutral structure for conveying information”. Authorship guides for highly regarded journals often indicate a preference for the active voice instead of passive:
+
++  Nature: "Nature journals like authors to write in the active voice ('we performed the experiment...') as experience has shown that readers find concepts and results to be conveyed more clearly if written directly.”@NatureHowWrite
++  Science: "Use active voice when suitable, particularly when necessary for correct syntax (e.g., 'To address this possibility, we constructed a lZap library ...,' not 'To address this possibility, a lZap library was constructed...')." @rubenHowWriteScientist2012
+
+And, on top of all that, you also end up with less text if you write in active voice, saving space for useful information and making it easier for your readers to understand.
+
+## A fun way to spot passive voice:
+If you can add the words ‘by zombies’ @ScaryeasyWayHelp2014 to the end of the sentence and the sentence still makes logical sense, then the sentence is in passive voice. You can also switch on the grammar settings in Microsoft Word’s spelling and grammar checker and it will show up that way.
+
+How to fix it?  
+
+Change:  
+
+“These measurements are not quantitatively reported in the paper” (... by zombies)
+
+To 
+
+“The paper does not quantitatively report these measurements” 
+
+Or even better, it's really the authors doing the reporting as the paper is an inanimate object...
+
+“We do not quantitatively report these measurements”.
+ 
+Change:
+
+“Six different table and partition configurations were tested” (... by zombies) 
+ 
+To
+ 
+“We tested six different table and partition configurations.”
+
+# Methods
+
+# Results
+
+# Discussion
+
+# Conclusion
+
+# Acknowledgements
+Don't forget to acknowledge the funder(s) with associated grant numbers if required. The same goes for folks who significantly assisted you with this paper but that are not authors.
+
+# Declaration of interest
+Descibe any relevant interests of the authors, particularly if there is a link to the research that is relatively uncommon and could be perceived as a conflict of interest.  
+
+# References {#references .unnumbered}

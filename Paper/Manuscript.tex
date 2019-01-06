@@ -1,0 +1,425 @@
+\documentclass[]{elsarticle} %review=doublespace preprint=single 5p=2 column
+%%% Begin My package additions %%%%%%%%%%%%%%%%%%%
+\usepackage[hyphens]{url}
+
+  \journal{Building and Environment} % Sets Journal name
+
+
+\usepackage{lineno} % add
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+\bibliographystyle{elsarticle-harv}
+\biboptions{sort&compress} % For natbib
+\usepackage{graphicx}
+\usepackage{booktabs} % book-quality tables
+%%%%%%%%%%%%%%%% end my additions to header
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \usepackage{fontspec}
+  \ifxetex
+    \usepackage{xltxtra,xunicode}
+  \fi
+  \defaultfontfeatures{Mapping=tex-text,Scale=MatchLowercase}
+  \newcommand{\euro}{€}
+\fi
+% use microtype if available
+\IfFileExists{microtype.sty}{\usepackage{microtype}}{}
+\usepackage[left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm]{geometry}
+\usepackage{longtable}
+\usepackage{graphicx}
+% We will generate all images so they have a width \maxwidth. This means
+% that they will get their normal width if they fit onto the page, but
+% are scaled down if they would overflow the margins.
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth
+\else\Gin@nat@width\fi}
+\makeatother
+\let\Oldincludegraphics\includegraphics
+\renewcommand{\includegraphics}[1]{\Oldincludegraphics[width=\maxwidth]{#1}}
+\ifxetex
+  \usepackage[setpagesize=false, % page size defined by xetex
+              unicode=false, % unicode breaks when used with xetex
+              xetex]{hyperref}
+\else
+  \usepackage[unicode=true]{hyperref}
+\fi
+\hypersetup{breaklinks=true,
+            bookmarks=true,
+            pdfauthor={},
+            pdftitle={An R markdown template for Elsevier journals with examples for beginners},
+            colorlinks=false,
+            urlcolor=blue,
+            linkcolor=magenta,
+            pdfborder={0 0 0}}
+\urlstyle{same}  % don't use monospace font for urls
+
+\setcounter{secnumdepth}{5}
+% Pandoc toggle for numbering sections (defaults to be off)
+% Pandoc header
+\usepackage{setspace}
+\doublespacing
+
+
+
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}{Lemma}[section]
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{corollary}{Corollary}[section]
+\newtheorem{proposition}{Proposition}[section]
+\theoremstyle{definition}
+\newtheorem{example}{Example}[section]
+\theoremstyle{definition}
+\newtheorem{exercise}{Exercise}[section]
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+\newtheorem*{solution}{Solution}
+\begin{document}
+\begin{frontmatter}
+
+  \title{An R markdown template for Elsevier journals with examples for beginners}
+    \author[CBE]{Paul Raftery\corref{c1}}
+   \ead{p.raftery@berkeley.edu} 
+   \cortext[c1]{Corresponding Author}
+    \author[Organisation2]{Next contributor}
+  
+  
+      \address[CBE]{Center for the Built Environment, UC Berkeley, 390 Wurster Hall,
+Berkeley, CA, 94720, USA}
+    \address[Organisation2]{Another organization, and their address}
+  
+  \begin{abstract}
+  Enter the text for your abstract here
+  \end{abstract}
+  
+ \end{frontmatter}
+
+Keywords:\\
+Key 1; Key 2; Key 3; Key 4; Key 5; Key 6 (max)
+
+\pagebreak
+
+\textbf{Highlights:}
+
+\begin{itemize}
+\tightlist
+\item
+  Add your 3 -5 highlights
+\item
+  As bullets here
+\item
+  Making sure each is less than 85 characters in length
+\end{itemize}
+
+\textbf{Graphical Abstract}\\
+\includegraphics{C:/Users/praft/Documents/GitHub/rmd-example/Paper/SupplementaryMaterial/Figures/Latex_logo.png}
+
+\pagebreak
+
+\hypertarget{introduction}{%
+\section{Introduction}\label{introduction}}
+
+The purpose of this (very much work-in-progress) document is to provide
+a complete R markdown template for an Elsevier journal submission (based
+on the rticles repository {[}1{]}), along with useful examples and
+packages to improve usability for folks who are just starting out with
+this workflow. The eventual intent is to capture minimal examples of the
+common things that authors need to do when writing papers in R markdown;
+provide examples of useful packages, workflows, and tools; and provide
+solutions to common issues that folks encounter.
+
+\hypertarget{examples}{%
+\section{Examples}\label{examples}}
+
+\hypertarget{heading-level-1}{%
+\section{Heading level 1}\label{heading-level-1}}
+
+\hypertarget{heading-level-2}{%
+\subsection{Heading level 2}\label{heading-level-2}}
+
+\hypertarget{heading-level-3}{%
+\subsubsection{Heading level 3}\label{heading-level-3}}
+
+Here's how to \textbf{bold} or \emph{italic} a piece of text.
+
+This is how you do a bullet point list:
+
+\begin{itemize}
+\tightlist
+\item
+  First bullet
+\item
+  Second bullet
+
+  \begin{itemize}
+  \tightlist
+  \item
+    A sub-bullet
+  \item
+    Another sub-bullet
+  \end{itemize}
+\end{itemize}
+
+Or an ordered option:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Item 1
+\item
+  Item 2
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Item 2a
+  \item
+    Item 2b
+  \end{itemize}
+\end{enumerate}
+
+\hypertarget{citations}{%
+\subsection{Citations}\label{citations}}
+
+Citing other literature is remarkably easy, just like this {[}2{]}. This
+citation key references the tag associated with an entry in
+Bibliography.bib (a BibTex file). I've found it easiest to use Zotero to
+manage my library of references and to generate the BibTex file, though
+any software that creates a valid BibTex file should work fine. Zotero
+allows you to create a `Collection' (or folder) that gathers together
+all of the references used for a particular document. When combined with
+with the Better BibTex plugin, that collection can be exported to a
+BibTex file that is continually updated as you add or edit references in
+that Collection. Better BibTex also puts the citation key - the text
+after the `@' sybmbol in the .Rmd file - on the upper right of each
+entry, which is convenient for adding citations.
+
+There's not much else involved in citing, as the references list gets
+built and formatted automatically based on the selected style. The only
+other issue I've had to look around to solve was figuring out how to
+combine multiple citations, which is easy when you know how. {[}2,3{]}
+
+\hypertarget{cross-referencing}{%
+\subsection{Cross-referencing}\label{cross-referencing}}
+
+This is how you refer to a figure in your text: Figure
+\ref{fig:correlation}. Simply reference the title of the code chunk, and
+ensure that the code chunk includes a figure caption.
+
+\begin{figure}
+\centering
+\includegraphics{C:/Users/praft/Documents/GitHub/rmd-example/Paper/SupplementaryMaterial/Figures/Correlation.png}
+\caption{\label{fig:correlation}Correlation. Source: XKCD, xkcd.com/552}
+\end{figure}
+
+\hypertarget{calculations-in-text}{%
+\subsection{Calculations in text}\label{calculations-in-text}}
+
+The holy grail of markdown - doing all of your calculations in the same
+file so you never need to worry about updating them after
+someone\footnote{Often I'm the someone, sorry CBE grad students. Also,
+  look, it's an example of a footnote!} asks you to make
+changes\ldots{}. again! It's as easy as pi: 3.14. Incidentally,you can
+selectively override the `global' options set at the beginning, to say
+for example, show more decimals: 3.1416.
+
+This is an example of outputing the result of a calculation that you
+perform within a code chunk in the document somewhere prior to the
+location where you first refer to it: 36.
+
+\hypertarget{other-packages}{%
+\subsection{Other packages}\label{other-packages}}
+
+Here are lots of packages that are useful for markdown docs. I encourage
+you to search for these whenever you encounter a new thing you need to
+do and to propose an addition to this repository accordingly. For
+example, the Stargazer package describes linear models in a nice table.
+
+\begin{table}[!htbp] \centering 
+  \caption{Car miles per gallon} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{1pt}}lcc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{2}{c}{\textit{Dependent variable:}} \\ 
+\cline{2-3} 
+\\[-1.8ex] & Highway & City \\ 
+\\[-1.8ex] & (1) & (2)\\ 
+\hline \\[-1.8ex] 
+ Displacement & $-$2.100$^{***}$ & $-$1.300$^{***}$ \\ 
+  & (0.520) & (0.340) \\ 
+  & & \\ 
+ Num. cylinders & $-$1.300$^{***}$ & $-$1.200$^{***}$ \\ 
+  & (0.410) & (0.270) \\ 
+  & & \\ 
+ Year & 0.150$^{***}$ & 0.071$^{**}$ \\ 
+  & (0.055) & (0.036) \\ 
+  & & \\ 
+ Constant & $-$259.000$^{**}$ & $-$114.000 \\ 
+  & (109.000) & (72.000) \\ 
+  & & \\ 
+\hline \\[-1.8ex] 
+Observations & 234 & 234 \\ 
+R$^{2}$ & 0.620 & 0.670 \\ 
+Adjusted R$^{2}$ & 0.610 & 0.670 \\ 
+Residual Std. Error (df = 230) & 3.700 & 2.500 \\ 
+F Statistic (df = 3; 230) & 124.000$^{***}$ & 158.000$^{***}$ \\ 
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{2}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+\end{tabular} 
+\end{table}
+
+\hypertarget{equations-and-math}{%
+\subsection{Equations and math}\label{equations-and-math}}
+
+Here's a basic example inline \(example_{subscript} = \frac{D}{R}\), or
+you display it on a whole line if needed. Google latex math cheat sheets
+for more information.
+
+\[\sum_{i=1}^{n}{x_i^2}\]
+
+\hypertarget{writing-style}{%
+\section{Writing style}\label{writing-style}}
+
+This is a little off topic for an Rmd example but a convenient place to
+remind our grad students about writing style. In almost all cases,
+active voice is better than passive voice. Several psychological studies
+show that the active voice is more easily understood by readers, and
+that information is more accurately reported by authors when writing in
+active voice. For example, research {[}4{]} has shown that the ``active
+{[}voice{]} offers a neutral structure for conveying information''.
+Authorship guides for highly regarded journals often indicate a
+preference for the active voice instead of passive:
+
+\begin{itemize}
+\tightlist
+\item
+  Nature: ``Nature journals like authors to write in the active voice
+  (`we performed the experiment\ldots{}') as experience has shown that
+  readers find concepts and results to be conveyed more clearly if
+  written directly.''{[}5{]}
+\item
+  Science: ``Use active voice when suitable, particularly when necessary
+  for correct syntax (e.g., `To address this possibility, we constructed
+  a lZap library \ldots{},' not `To address this possibility, a lZap
+  library was constructed\ldots{}').'' {[}6{]}
+\end{itemize}
+
+And, on top of all that, you also end up with less text if you write in
+active voice, saving space for useful information and making it easier
+for your readers to understand.
+
+\hypertarget{a-fun-way-to-spot-passive-voice}{%
+\subsection{A fun way to spot passive
+voice:}\label{a-fun-way-to-spot-passive-voice}}
+
+If you can add the words `by zombies' {[}7{]} to the end of the sentence
+and the sentence still makes logical sense, then the sentence is in
+passive voice. You can also switch on the grammar settings in Microsoft
+Word's spelling and grammar checker and it will show up that way.
+
+How to fix it?
+
+Change:
+
+``These measurements are not quantitatively reported in the paper''
+(\ldots{} by zombies)
+
+To
+
+``The paper does not quantitatively report these measurements''
+
+Or even better, it's really the authors doing the reporting as the paper
+is an inanimate object\ldots{}
+
+``We do not quantitatively report these measurements''.
+
+Change:
+
+``Six different table and partition configurations were tested''
+(\ldots{} by zombies)
+
+To
+
+``We tested six different table and partition configurations.''
+
+\hypertarget{methods}{%
+\section{Methods}\label{methods}}
+
+\hypertarget{results}{%
+\section{Results}\label{results}}
+
+\hypertarget{discussion}{%
+\section{Discussion}\label{discussion}}
+
+\hypertarget{conclusion}{%
+\section{Conclusion}\label{conclusion}}
+
+\hypertarget{acknowledgements}{%
+\section{Acknowledgements}\label{acknowledgements}}
+
+Don't forget to acknowledge the funder(s) with associated grant numbers
+if required. The same goes for folks who significantly assisted you with
+this paper but that are not authors.
+
+\hypertarget{declaration-of-interest}{%
+\section{Declaration of interest}\label{declaration-of-interest}}
+
+Descibe any relevant interests of the authors, particularly if there is
+a link to the research that is relatively uncommon and could be
+perceived as a conflict of interest.
+
+\hypertarget{references}{%
+\section*{References}\label{references}}
+\addcontentsline{toc}{section}{References}
+
+\hypertarget{refs}{}
+\leavevmode\hypertarget{ref-LaTeXJournalArticle2019}{}%
+{[}1{]} LaTeX Journal Article Templates for R Markdown. Contribute to
+rstudio/rticles development by creating an account on GitHub, (2019).
+
+\leavevmode\hypertarget{ref-coakleyReviewMethodsMatch2014}{}%
+{[}2{]} D. Coakley, P. Raftery, M. Keane, A review of methods to match
+building energy simulation models to measured data, Renewable and
+Sustainable Energy Reviews. 37 (2014) 123--141.
+doi:\href{https://doi.org/10.1016/j.rser.2014.05.007}{10.1016/j.rser.2014.05.007}.
+
+\leavevmode\hypertarget{ref-zhaiHumanComfortPerceived2015a}{}%
+{[}3{]} Y. Zhai, Y. Zhang, H. Zhang, W. Pasut, E. Arens, Q. Meng, Human
+comfort and perceived air quality in warm and humid environments with
+ceiling fans, Building and Environment. 90 (2015) 178--185.
+doi:\href{https://doi.org/10.1016/j.buildenv.2015.04.003}{10.1016/j.buildenv.2015.04.003}.
+
+\leavevmode\hypertarget{ref-klenbortMarkednessPerspectiveInterpretation1974}{}%
+{[}4{]} I. Klenbort, M. Anisfeld, Markedness and perspective in the
+interpretation of the active and passive voice, Quarterly Journal of
+Experimental Psychology. 26 (1974) 189--195.
+doi:\href{https://doi.org/10.1080/14640747408400404}{10.1080/14640747408400404}.
+
+\leavevmode\hypertarget{ref-NatureHowWrite}{}%
+{[}5{]} Nature - How to write a paper, (n.d.).
+
+\leavevmode\hypertarget{ref-rubenHowWriteScientist2012}{}%
+{[}6{]} A. Ruben, 2012, 8. Am, How to Write Like a Scientist, Science
+\textbar{} AAAS. (2012).
+
+\leavevmode\hypertarget{ref-ScaryeasyWayHelp2014}{}%
+{[}7{]} A scary-easy way to help you find passive voice!, A Scary-Easy
+Way to Help You Find Passive Voice! \textbar{} Grammarly Blog. (2014).
+
+\end{document}
+
+
