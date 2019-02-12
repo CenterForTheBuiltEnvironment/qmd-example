@@ -44,6 +44,7 @@ require(stargazer)
 #require(RColorBrewer)
 #require(ggrepel)
 #require(ggpmisc)
+require(gt)
 ```
 
 ```{r setup, echo=FALSE, cache=FALSE }
@@ -108,15 +109,15 @@ df <- df%>%
 
 # characterize petal length into 5 categories in increments of 1.5 cm
 df  = df%>%
-  mutate(petel_length_level = ifelse(petal_length>= 6 & petal_length <7.5,"VeryHigh",0))%>%   
-  mutate(petel_length_level = ifelse(petal_length>= 4.5 & petal_length <6,"High",petel_length_level))%>%  
-  mutate(petel_length_level = ifelse(petal_length>= 3 & petal_length <4.5,"Medium",petel_length_level))%>%
-  mutate(petel_length_level = ifelse(petal_length>= 1.5 & petal_length <3,"Low",petel_length_level))%>%
-  mutate(petel_length_level = ifelse(petal_length <1.5,"VeryLow",petel_length_level))
+  mutate(petal_length_level = ifelse(petal_length>= 6 & petal_length <7.5,"VeryHigh",0))%>%   
+  mutate(petal_length_level = ifelse(petal_length>= 4.5 & petal_length <6,"High",petal_length_level))%>%  
+  mutate(petal_length_level = ifelse(petal_length>= 3 & petal_length <4.5,"Medium",petal_length_level))%>%
+  mutate(petal_length_level = ifelse(petal_length>= 1.5 & petal_length <3,"Low",petal_length_level))%>%
+  mutate(petal_length_level = ifelse(petal_length <1.5,"VeryLow",petal_length_level))
 
 # order new petal length categories correctly from Low to High
-df = df%>%mutate(petel_length_level = as.factor(petel_length_level))
-df$petel_length_level = factor(df$petel_length_level, levels=c("VeryLow","Low","Medium","High","VeryHigh"))
+df = df%>%mutate(petal_length_level = as.factor(petal_length_level))
+df$petal_length_level = factor(df$petal_length_level, levels=c("VeryLow","Low","Medium","High","VeryHigh"))
 ```
 
 
@@ -128,7 +129,7 @@ Keyword 1\; Keyword 2\; Keyword 3\; Keyword 4\; Keyword 5\; Keyword 6 (max)
 **Highlights\:**  
 
 -   Add your 3 -5 highlights
--   As bullets here
+-   As bulletpoints here
 -   Making sure each is less than 85 characters in length
 
 **Graphical Abstract**  
@@ -146,11 +147,16 @@ include_graphics(here("Paper","SupplementaryMaterial","Figures","Latex_logo.png"
 # Introduction
 The purpose of this (very much work-in-progress) document is to provide a complete R markdown template for an Elsevier journal submission (based on the rticles repository @LaTeXJournalArticle2019), along with useful examples and packages to improve usability for folks who are just starting out with this workflow. The eventual intent is to capture minimal examples of the common things that authors need to do when writing papers in R markdown; provide examples of useful packages, workflows, and tools; and provide solutions to common issues that folks encounter.
 
-# Examples
+# Methods
+
+## Markdown
+Here are some examples of how to format text with Markdown.
+
 # Heading level 1
 ## Heading level 2
 ### Heading level 3
-Here's how to **bold** or *italic* a piece of text.
+
+Here's how to **bold** or *italicize* a piece of text.
 
 This is how you do a bullet point list:
 
@@ -165,6 +171,21 @@ Or an ordered option:
 2. Item 2
     + Item 2a
     + Item 2b
+
+## Tables
+Here is an example of a table created from the .csv file in the `SupplementaryMaterial/Data`folder using the `gt` package from RStudio. You can read more about `gt` [here](https://github.com/rstudio/gt), and there's helpful examples to further customize tables (eg with color, foototes, significant figures, re-labeling columns, and more) [here](https://github.com/allisonhorst/gt-awesome-tables). 
+
+```{r}
+df %>% 
+    sample_n(5) %>%   # select 5 random rows from the dataframe
+    select(iris_class, sepal_length, petal_length, petal_length_level) %>%  # show only these columns (in this order)
+    gt () %>% #make a table
+    tab_header( 
+    title = "Example irises", # ...with this title
+    subtitle = "Data on five randomly selected irises")
+    
+```
+
 
 ## Citations
 Citing other literature is remarkably easy, just like this @coakleyReviewMethodsMatch2014. This citation key references the tag associated with an entry in Bibliography.bib (a BibTex file). I've found it easiest to use Zotero to manage my library of references and to generate the BibTex file, though any software that creates a valid BibTex file should work fine. Zotero allows you to create a 'Collection' (or folder) that gathers together all of the references used for a particular document. When combined with with the Better BibTex plugin, that collection can be exported to a BibTex file that is continually updated as you add or edit references in that Collection. Better BibTex also puts the citation key - the text after the '\@' sybmbol in the .Rmd file - on the upper right of each entry, which is convenient for adding citations. 
@@ -239,8 +260,6 @@ Change:
 To
  
 “We tested six different table and partition configurations.”
-
-# Methods
 
 # Results
 
