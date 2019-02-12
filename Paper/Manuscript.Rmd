@@ -43,7 +43,7 @@ require(knitr)
 require(stargazer)
 #require(RColorBrewer)
 #require(ggrepel)
-#require(ggpmisc)
+require(ggpmisc)
 require(gt)
 ```
 
@@ -147,6 +147,11 @@ include_graphics(here("Paper","SupplementaryMaterial","Figures","Latex_logo.png"
 # Introduction
 The purpose of this (very much work-in-progress) document is to provide a complete R markdown template for an Elsevier journal submission (based on the rticles repository @LaTeXJournalArticle2019), along with useful examples and packages to improve usability for folks who are just starting out with this workflow. The eventual intent is to capture minimal examples of the common things that authors need to do when writing papers in R markdown; provide examples of useful packages, workflows, and tools; and provide solutions to common issues that folks encounter.
 
+ You may wish to have short sub-sections for:
+ 
+ - Terminology
+ - Objectives
+
 # Methods
 
 ## Markdown
@@ -175,7 +180,7 @@ Or an ordered option:
 ## Tables
 Here is an example of a table created from the .csv file in the `SupplementaryMaterial/Data`folder using the `gt` package from RStudio. You can read more about `gt` [here](https://github.com/rstudio/gt), and there's helpful examples to further customize tables (eg with color, foototes, significant figures, re-labeling columns, and more) [here](https://github.com/allisonhorst/gt-awesome-tables). 
 
-```{r}
+```{r irisTable}
 df %>% 
     sample_n(5) %>%   # select 5 random rows from the dataframe
     select(iris_class, sepal_length, petal_length, petal_length_level) %>%  # show only these columns (in this order)
@@ -185,12 +190,6 @@ df %>%
     subtitle = "Data on five randomly selected irises")
     
 ```
-
-
-## Citations
-Citing other literature is remarkably easy, just like this @coakleyReviewMethodsMatch2014. This citation key references the tag associated with an entry in Bibliography.bib (a BibTex file). I've found it easiest to use Zotero to manage my library of references and to generate the BibTex file, though any software that creates a valid BibTex file should work fine. Zotero allows you to create a 'Collection' (or folder) that gathers together all of the references used for a particular document. When combined with with the Better BibTex plugin, that collection can be exported to a BibTex file that is continually updated as you add or edit references in that Collection. Better BibTex also puts the citation key - the text after the '\@' sybmbol in the .Rmd file - on the upper right of each entry, which is convenient for adding citations. 
-
-There's not much else involved in citing, as the references list gets built and formatted automatically based on the selected style. The only other issue I've had to look around to solve was figuring out how to combine multiple citations, which is easy when you know how. [@coakleyReviewMethodsMatch2014; @zhaiHumanComfortPerceived2015a]
 
 ## Cross-referencing
 This is how you refer to a figure in your text: Figure \@ref(fig:correlation). Simply reference the title of the code chunk, and ensure that the code chunk includes a figure caption.
@@ -212,23 +211,29 @@ xyz = 18*2
 
 This is an example of outputing the result of a calculation that you perform within a code chunk in the document somewhere prior to the location where you first refer to it: `r xyz`.
 
-## Other packages
-Here are lots of packages that are useful for markdown docs. I encourage you to search for these whenever you encounter a new thing you need to do and to propose an addition to this repository accordingly. For example, the Stargazer package describes linear models in a nice table.
+## Citations
+Citing other literature is remarkably easy, just like this @coakleyReviewMethodsMatch2014. This citation key references the tag associated with an entry in Bibliography.bib (a BibTex file). I've found it easiest to use Zotero to manage my library of references and to generate the BibTex file, though any software that creates a valid BibTex file should work fine. Zotero allows you to create a 'Collection' (or folder) that gathers together all of the references used for a particular document. When combined with with the Better BibTex plugin, that collection can be exported to a BibTex file that is continually updated as you add or edit references in that Collection. Better BibTex also puts the citation key - the text after the '\@' sybmbol in the .Rmd file - on the upper right of each entry, which is convenient for adding citations. 
 
-``` {r linmods, results='asis', echo=FALSE, warning=FALSE}
-lm1 = lm(hwy ~ displ + cyl + year, mpg)
-lm2 = lm(cty ~ displ + cyl + year, mpg)
-# uncomment next line for printing in console (i.e. human readable in RStudio)
-#stargazer(lm1, lm2, type="text")
-stargazer(lm1, lm2, dep.var.labels=c("Highway","City"), covariate.labels=c("Displacement","Num. cylinders", "Year"), title = "Car miles per gallon", column.sep.width = "1pt", header=FALSE)
-```
+There's not much else involved in citing, as the references list gets built and formatted automatically based on the selected style. The only other issue I've had to look around to solve was figuring out how to combine multiple citations, which is easy when you know how. [@coakleyReviewMethodsMatch2014; @zhaiHumanComfortPerceived2015a]
+
+The instructions for installing BetterBibtex are [here](https://retorque.re/zotero-better-bibtex/).
+
+### Add note on citing software
+- TODO
+
+## Other packages
+There are lots of packages that are useful for markdown docs. We encourage you to search for these whenever you encounter a new thing you need to do and to propose an addition to this repository accordingly.`
 
 ## Equations and math
 Here's a basic example inline $example_{subscript} = \frac{D}{R}$, or you display it on a whole line if needed. Google latex math cheat sheets for more information.
 
 $$\sum_{i=1}^{n}{x_i^2}$$
 
-# Writing style
+Here is another equation:
+
+$$ CD_{rated} = \frac{4*Q}{\pi*D^2} = 2.0~m/s$$
+
+## Writing style
 This is a little off topic for an Rmd example but a convenient place to remind our grad students about writing style. In almost all cases, active voice is better than passive voice. Several psychological studies show that the active voice is more easily understood by readers, and that information is more accurately reported by authors when writing in active voice. For example, research @klenbortMarkednessPerspectiveInterpretation1974 has shown that the “active [voice] offers a neutral structure for conveying information”. Authorship guides for highly regarded journals often indicate a preference for the active voice instead of passive:
 
 +  Nature: "Nature journals like authors to write in the active voice ('we performed the experiment...') as experience has shown that readers find concepts and results to be conveyed more clearly if written directly.”@NatureHowWrite
@@ -236,7 +241,7 @@ This is a little off topic for an Rmd example but a convenient place to remind o
 
 And, on top of all that, you also end up with less text if you write in active voice, saving space for useful information and making it easier for your readers to understand.
 
-## A fun way to spot passive voice:
+### A fun way to spot passive voice:
 If you can add the words ‘by zombies’ @ScaryeasyWayHelp2014 to the end of the sentence and the sentence still makes logical sense, then the sentence is in passive voice. You can also switch on the grammar settings in Microsoft Word’s spelling and grammar checker and it will show up that way.
 
 How to fix it?  
@@ -262,8 +267,46 @@ To
 “We tested six different table and partition configurations.”
 
 # Results
+Figure \@ref(fig:irises) shows petal widths by iris type.
+
+```{r irises, message=FALSE, fig.width =8, fig.height = 4.5, fig.cap = "Petal and sepal lengths from iris dataset" }
+ggplot(df, aes(x = petal_length, y = sepal_length, group = iris_class)) + 
+  geom_smooth(method=lm, se=FALSE, size = 0.5, linetype = "solid", color = "darkgray") +
+  geom_point(aes(color = iris_class, shape = long_sepal), alpha = 0.6, size=3) +
+  coord_cartesian(xlim = c(0,9), ylim = c(0,9)) + 
+  stat_poly_eq(formula = y~x, 
+               aes(color=iris_class, label = paste(..eq.label.., sep = "~~~")), 
+               parse = TRUE, label.y = c(2, 2.5, 3), 
+               label.x = 7, hjust = 1, size = 3.5) +
+  scale_y_continuous(expand=c(0,0),expression(Petal~length ~ (cm))) +
+  scale_x_continuous(expand=c(0,0),expression(Sepal~length (cm))) +
+  guides(color=guide_legend(title="Class",
+                            reverse=T, override.aes = list(shape = 15, size=3)), 
+         shape=guide_legend(title="long_sepal")) +
+  scale_color_manual (values = cal_palette4)
+```
+
+## Violin plot
+Figure \@ref(fig:petalwidths) shows petal widths by iris type.
+
+``` {r petalwidths, message=FALSE, fig.width = 6, fig.height = 4, fig.cap = "Petal widths by class" }
+df %>%
+    ggplot() + 
+    geom_violin(aes( x = iris_class, y = petal_width, color = iris_class), draw_quantiles = T, trim = F, show.legend = F) +
+    geom_boxplot(aes( x = iris_class, y = petal_width, color = iris_class), width = 0.07, show.legend = F)+
+    ggtitle("Petal widths by species") +
+    scale_color_manual(values=cal_palette4) 
+    
+```
 
 # Discussion
+
+
+# Limitations
+It is important to include a discussion of limitations in any paper. Limitations of this template include:
+
+- Figures are included after the text, not at the location where they are discussed in the text
+
 
 # Conclusion
 
