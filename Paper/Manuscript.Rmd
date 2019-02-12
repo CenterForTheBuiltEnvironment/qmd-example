@@ -1,19 +1,22 @@
 ---
-title: An R markdown template for Elsevier journals with examples for beginners 
+title: Article template&#58; A reproducible RMarkdown template for Elsevier's journal format with examples for beginners  
 author:
   - name: Paul Raftery 
     email: p.raftery@berkeley.edu
     affiliation: CBE
     footnote: Corresponding Author
-  - name: Next contributor 
-    affiliation: Organisation2
+  - name: Dana Miller
+    affiliation: CBE
+  - name: Next contributor
+    affiliation: Organization2
 address:
   - code: CBE
     address: Center for the Built Environment, UC Berkeley, 390 Wurster Hall, Berkeley, CA, 94720, USA
   - code: Organisation2
     address: Another organization, and their address
 
-abstract: Enter the text for your abstract here
+abstract: Enter the text for your abstract here. All data and analysis code in this template is publicly available at [https://github.com/CenterForTheBuiltEnvironment/rmd-example](https://github.com/CenterForTheBuiltEnvironment/rmd-example) and can be freely adapted and reused. Suggestions or pull requests to improve this template or create additional templates are welcome.
+
 journal: "Building and Environment"
 date: "`r Sys.Date()`"
 bibliography: Bibliography.bib
@@ -25,6 +28,7 @@ geometry: "left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm"
 header-includes:
 - \usepackage{setspace}
 - \doublespacing
+- \usepackage{caption}
 ---
 
 ``` {r setup, echo=FALSE, cache=FALSE, results="hide", message=FALSE}
