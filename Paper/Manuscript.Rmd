@@ -78,16 +78,50 @@ df <- read_csv(here("Paper","SupplementaryMaterial","Data","iris_data.csv"), gue
 ```
 
 ``` {r preprocessData, echo=FALSE, results="hide"}
-# here is where all the preprocessing happens
-#
+## here is where all the preprocessing happens
 # ensure you comment any sections or functions in sufficient detail that
 # their purpose can be readily understood without reading through the detail 
 # of the code itself
+
+# rename columns and create a new variable
+df <- df%>%
+  rename(sepal_length = X1)%>%
+  rename(sepal_width = X2) %>%
+  rename(petal_length = X3) %>%
+  rename(petal_width = X4)%>%
+  rename(iris_class = X5) %>%
+ mutate(length_ratio =  sepal_length/ petal_length)
+
+# fit linear models for relationship between sepal and petal width for each iris type
+df_lms = df %>% 
+  group_by(iris_class) %>%
+  do(fit_length = lm(sepal_length ~ petal_length, data = .))
+
+# generate convenient filtering variables
+df <- df%>%
+  mutate(
+    # identify if sepal length is more than 1 standard deviation above mean
+    long_sepal = ifelse(sepal_length>= (mean(df$sepal_length) + sd(df$sepal_length)), "Yes", "No"),
+    # identify if the petal width is a specified value, in this case exactly 1 or 2
+    integer_petal = ifelse((petal_width >= 0.9 & petal_width<= 1.1) | (petal_width>= 1.9 & petal_width<=2.1),"Yes", "No")
+  )
+
+# characterize petal length into 5 categories in increments of 1.5 cm
+df  = df%>%
+  mutate(petel_length_level = ifelse(petal_length>= 6 & petal_length <7.5,"VeryHigh",0))%>%   
+  mutate(petel_length_level = ifelse(petal_length>= 4.5 & petal_length <6,"High",petel_length_level))%>%  
+  mutate(petel_length_level = ifelse(petal_length>= 3 & petal_length <4.5,"Medium",petel_length_level))%>%
+  mutate(petel_length_level = ifelse(petal_length>= 1.5 & petal_length <3,"Low",petel_length_level))%>%
+  mutate(petel_length_level = ifelse(petal_length <1.5,"VeryLow",petel_length_level))
+
+# order new petal length categories correctly from Low to High
+df = df%>%mutate(petel_length_level = as.factor(petel_length_level))
+df$petel_length_level = factor(df$petel_length_level, levels=c("VeryLow","Low","Medium","High","VeryHigh"))
 ```
 
 
 Keywords\:  
-Key 1\; Key 2\; Key 3\; Key 4\; Key 5\; Key 6 (max)
+Keyword 1\; Keyword 2\; Keyword 3\; Keyword 4\; Keyword 5\; Keyword 6 (max)
 
 \pagebreak
 
