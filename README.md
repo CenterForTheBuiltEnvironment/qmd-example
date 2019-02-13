@@ -2,6 +2,7 @@
 
 RStudio: [![Binder](http://mybinder.org/badge_logo.svg)](http://mybinder.org/v2/gh/CenterForTheBuiltEnvironment/rmd-example/master?urlpath=rstudio)
 
+
 ### Overview
 This repository contains work in progress on an template for journal articles (eg for *Energy and Buildings*,  *Buildings and Environment*, or other journals that use the Elsevier format) along with examples for beginners. This example is slightly modified from the template from the `elsevier_article` template from the`rticles` package [here](https://github.com/rstudio/rticles). 
 
