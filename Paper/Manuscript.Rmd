@@ -51,7 +51,6 @@ header-includes:
 require(tidyverse)
 require(here)
 require(knitr)
-require(stargazer)
 require(ggpmisc)
 require(gt)
 require(grateful)
