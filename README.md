@@ -23,29 +23,28 @@ remotes::install_github("Pakillo/grateful")
 ### Contents of this repository
 The key contents are organized as follows:
 
-rmd-example
- - Readme.Rmd
- - .here
- - LICENSE
- - Paper
-   - Bibliography.bib 
-   - Manuscript.PDF
-   - Manuscript.Rmd
+- rmd-example
+    - Readme.Rmd
+    - .here
+    - LICENSE
+    - Paper
+        - Bibliography.bib 
+        - Manuscript.PDF
+        - Manuscript.Rmd
    
-   - SupplementaryMaterial
+    - SupplementaryMaterial
         - Data
         - Images
         - Software_citations
         - src
         
-   - Manuscript_files
-       - figure_latex
-          -irises-1.pdf
-          -petalwidths-1.pdf
+    - Manuscript_files
+        - figure_latex
 
 The top-level directory contains a`Paper` directory where most of the files for this project are stored. The `.here` file designates this location as the starting point for all file paths executed within this project. It is important to have a 'LICENSE' file to make it clear if other people have the right to reuse and build on your code, and under what conditions. See the interactive ["Choose a license"](https://choosealicense.com/) guide for help selecting one. 
 
 There are also additional files under `/Paper`:
+
 - `Bibliography.bib` containing the BibTeX file with all the references used in this paper
 - `Manuscript_files`, an automatically-created folder containing a separate .jpg image of each plot created in the manuscript
 - `elsarticle.cls` for formatting the PDF 
@@ -53,6 +52,7 @@ There are also additional files under `/Paper`:
 - Some files created by the process of converting an Rmarkdown document to a PDF via LaTeX, such as `Manuscript.tex`, `Manuscript.fff`, `Manuscrpt.spl`, `Manuscript.ttt`. You do not need to edit these files. 
 
 Under `SupplementaryMaterial`:
+
  - `Images` contains graphics that are not created programmatically 
  - `src` is the convention for a folder that contains additional .R scripts
  - `Software_citations` contains the output of the `greatful` package for all the software cited in this template
