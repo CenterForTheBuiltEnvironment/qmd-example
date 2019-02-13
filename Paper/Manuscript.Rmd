@@ -48,7 +48,10 @@ header-includes:
 ## code chunk for libraries that are required to be installed + loaded for this template
 # note the first word after `{r...` in the chunk header above is the name of this chunk. 
 # Names must be unique and not have spaces (underscores are ok), so name with CamelCaseLikeThis or snake_case_like_this
-require(tidyverse)
+require(dplyr)
+require(readr)
+require(ggplot2)
+require(magrittr)
 require(here)
 require(knitr)
 require(ggpmisc)
@@ -247,7 +250,7 @@ You can use the `greatful` package to quickly generate a list of the packages fo
 -   rticles - @rticles
 
 ```{r include = FALSE}
-pkgs <- c("tidyverse", "here", "knitr", "ggpmisc", "gt", "grateful", "base", "rticles")
+pkgs <- c("here", "knitr", "ggpmisc", "gt", "grateful", "base", "rticles")
 cites <- grateful::get_citations(pkgs, filename = "pkg-refs.bib", out.dir =  here("/Paper/SupplementaryMaterial/Software_citations") )
 ```
 
