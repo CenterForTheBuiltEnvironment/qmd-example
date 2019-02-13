@@ -1,5 +1,5 @@
 ---
-title: Article template&#58; A reproducible RMarkdown template for Elsevier's journal format with examples for beginners  
+title: A reproducible journal article with RMarkdown&#58; A  building science template with examples for beginners based on the Elsevier journal format 
 author:
   - name: Paul Raftery 
     email: p.raftery@berkeley.edu
