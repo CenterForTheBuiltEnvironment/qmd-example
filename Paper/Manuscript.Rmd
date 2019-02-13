@@ -23,7 +23,7 @@ bibliography: Bibliography.bib
 output:
   bookdown::pdf_book:
     base_format: rticles::elsevier_article
-csl: elsevier-with-titles.csl
+csl: advances-in-building-energy-research.csl
 geometry: "left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm"
 header-includes:
 - \usepackage{setspace}
@@ -31,20 +31,26 @@ header-includes:
 - \usepackage{caption}
 ---
 
+```{r citationStyle, echo = FALSE}
+#The code above inside the `---` is called a YAML header. By default, the Elsevier template specifices a ciation format where in-text references look like this: [1], [2]. However, this format is often less helpful when reviewing or editing , since there's no quick way of knowing what the citations refer to. 
+
+#An alternative citation style is the `author-date` format, where in-text references look like this: Coakley et al., 2014; Zhai et al., 2015. 
+
+# Currently this template is set up to knit with the author-date format from the journal "Advances in Building Energy Research", which is specified by the file above called `advances-in-building-energy-research.csl`. If you need to change the citation and bibliography style to the Elsevier template used by Elsevier journals like "Energy and Buildings", replace `advances-in-building-energy-research.csl` with `elsevier-with-titles.csl`
+```
+
+
 ``` {r libraries, echo=FALSE, cache=FALSE, results="hide", message=FALSE, warning = FALSE}
 ## code chunk for libraries that are required to be installed + loaded for this template
 # note the first word after `{r...` in the chunk header above is the name of this chunk. 
 # Names must be unique and not have spaces (underscores are ok), so name with CamelCaseLikeThis or snake_case_like_this
 require(tidyverse)
-#require(ggExtra)
-#require(gridExtra)
 require(here)
 require(knitr)
 require(stargazer)
-#require(RColorBrewer)
-#require(ggrepel)
 require(ggpmisc)
 require(gt)
+require(grateful)
 ```
 
 ```{r setup, echo=FALSE, cache=FALSE }
@@ -145,21 +151,19 @@ include_graphics(here("Paper","SupplementaryMaterial","Figures","Latex_logo.png"
 \pagebreak
    
 # Introduction
-The purpose of this (very much work-in-progress) document is to provide a complete R markdown template for an Elsevier journal submission (based on the rticles repository @LaTeXJournalArticle2019), along with useful examples and packages to improve usability for folks who are just starting out with this workflow. The eventual intent is to capture minimal examples of the common things that authors need to do when writing papers in R markdown; provide examples of useful packages, workflows, and tools; and provide solutions to common issues that folks encounter.
+The purpose of this (very much work-in-progress) document is to provide a complete R markdown template for an Elsevier journal submission (based on the rticles repository @rticles), along with useful examples and packages to improve usability for folks who are just starting out with this workflow. The eventual intent is to capture minimal examples of the common things that authors need to do when writing papers in R markdown; provide examples of useful packages, workflows, and tools; and provide solutions to common issues that folks encounter.
 
  You may wish to have short sub-sections for:
  
  - Terminology
  - Objectives
 
-# Methods
+# Methods (this is a 'level 1 heading')
 
-## Markdown
+## Markdown (this is a 'level 2 heading')
 Here are some examples of how to format text with Markdown.
 
-# Heading level 1
-## Heading level 2
-### Heading level 3
+### Level 3 heading
 
 Here's how to **bold** or *italicize* a piece of text.
 
@@ -218,11 +222,34 @@ There's not much else involved in citing, as the references list gets built and 
 
 The instructions for installing BetterBibtex are [here](https://retorque.re/zotero-better-bibtex/).
 
-### Add note on citing software
-- TODO
-
 ## Other packages
-There are lots of packages that are useful for markdown docs. We encourage you to search for these whenever you encounter a new thing you need to do and to propose an addition to this repository accordingly.`
+There are lots of packages that are useful for markdown docs and customizing plots. We encourage you to search for these whenever you encounter a new thing you need to do and to propose an addition to this repository accordingly. Some examples to start: `ggExtra`, `gridExtra`, `RColorBrewer`, `ggrepel`...
+
+### Citing software
+
+```{r include=FALSE}
+cite_packages(out.format = "md", out.dir =  here("/Paper/SupplementaryMaterial"))
+
+```
+
+It is also good practice to include citations not such for literature like journal articles and reports, but also the software used in the analysis. Many software packages have accompanying publications that can be cited, and even if they don't it is important to attribute which version and which software you used. Citing software helps to provide credit for the creators and maintainors of the software and demonstrate that people (like you!) are using the software, which is especially important for open-source tools supported through public research funding. 
+
+You can use the `greatful` package to quickly generate a list of the packages for software used in an R project using the `cite_packages` function from `greatful`. There is an additional function called `get_citations` that generates the Bibtex-formatted citations for each package. It's not elegant, but you can use the first to list packages used, then generate the `pkg-refs.bib` file (saved to `/Paper/SuplementaryMaterial` by default in this template), copy the content into your overall `Bibliography.bib` file for the whole document, and then cite the packages in your document as you would another source, eg by using `@base` for an in-text citation for core R software before other packages are installed (also known as 'base R'). 
+
+-   base R - @base
+-   ggpmisc - @ggpmisc
+-   grateful  - @grateful
+-   gt - @gt
+-   here  - @here
+-   knitr - @knitr
+-   tidyverse -  @tidyverse
+-   rticles - @rticles
+
+```{r include = FALSE}
+pkgs <- c("tidyverse", "here", "knitr", "stargazer", "ggpmisc", "gt", "grateful", "base", "rticles")
+cites <- grateful::get_citations(pkgs, filename = "pkg-refs.bib", out.dir =  here("/Paper/SupplementaryMaterial") )
+```
+
 
 ## Equations and math
 Here's a basic example inline $example_{subscript} = \frac{D}{R}$, or you display it on a whole line if needed. Google latex math cheat sheets for more information.
