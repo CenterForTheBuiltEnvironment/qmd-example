@@ -28,7 +28,7 @@ geometry: "left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm"
 header-includes:
 - \usepackage{setspace}
 - \doublespacing
-- \usepackage{caption}
+- \usepackage[font={small}]{caption}
 ---
 
 ```{r citationStyle, echo = FALSE}
@@ -338,9 +338,9 @@ It is important to include a discussion of limitations in any paper. Limitations
 # Conclusion
 
 # Acknowledgements
-Don't forget to acknowledge the funder(s) with associated grant numbers if required. The same goes for folks who significantly assisted you with this paper but that are not authors.
+Don't forget to acknowledge the funder(s) with associated grant numbers if required. The same goes for folks who significantly assisted you with this paper but that are not authors. Eg "Agency (grant number 12345) supported this work, with cost share provided by the Center for the Built Environment. We thank Person1 and Person2 for assistance with data collection""
 
 # Declaration of interest
-Descibe any relevant interests of the authors, particularly if there is a link to the research that is relatively uncommon and could be perceived as a conflict of interest.  
+Descibe any relevant interests of the authors, particularly if there is a link to the research that is relatively uncommon and could be perceived as a conflict of interest.  Otherwise, "All authors declare no conflict of interest."
 
 # References {#references .unnumbered}
