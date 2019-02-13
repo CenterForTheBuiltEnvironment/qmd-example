@@ -59,3 +59,5 @@ Under `SupplementaryMaterial`:
  - `Data` is a convention for a folder containing the data used in this analysis, since this dataset is relatively small and something that can be made publicly avalible. 
  
  
+### Troubleshooting
+- If you have knitted this document, opened the PDF (eg in Adobe Acrobat), and then try to re-knit the PDF while the file is open, the process will fail. Close the PDF, re-knit it, then re-open
