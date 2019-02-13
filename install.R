@@ -1,0 +1,8 @@
+install.packages("tidyverse")
+install.packages("rmarkdown")
+install.packages("ggpmisc")
+install.packages("here")
+install.packages("knitr")
+install.packages("devtools")
+remotes::install_github("rstudio/gt")
+remotes::install_github("Pakillo/grateful")
