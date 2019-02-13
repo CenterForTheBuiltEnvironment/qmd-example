@@ -145,7 +145,7 @@ Keyword 1\; Keyword 2\; Keyword 3\; Keyword 4\; Keyword 5\; Keyword 6 (max)
 **Graphical Abstract**  
 ```{r graphabs, message=FALSE}
 #include a graphical abstract, without a caption
-include_graphics(here("Paper","SupplementaryMaterial","Figures","Latex_logo.png"))
+include_graphics(here("Paper","SupplementaryMaterial","Images","Latex_logo.png"))
 
 # note the use of the here package (https://github.com/r-lib/here). This package allows you to define any filepath relative to an (empty) .here file, which means no more messing around changing filepaths!
 
@@ -201,7 +201,7 @@ df %>%
 This is how you refer to a figure in your text: Figure \@ref(fig:correlation). Simply reference the title of the code chunk, and ensure that the code chunk includes a figure caption.
 
 ```{r correlation, fig.width = 1, fig.cap = "Correlation. Source: XKCD, xkcd.com/552"}
-include_graphics(here("Paper","SupplementaryMaterial","Figures","Correlation.png"), dpi= 500)
+include_graphics(here("Paper","SupplementaryMaterial","Images","Correlation.png"), dpi= 500)
 ```
 
 ## Calculations in text
