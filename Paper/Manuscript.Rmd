@@ -247,7 +247,7 @@ You can use the `greatful` package to quickly generate a list of the packages fo
 -   rticles - @rticles
 
 ```{r include = FALSE}
-pkgs <- c("tidyverse", "here", "knitr", "stargazer", "ggpmisc", "gt", "grateful", "base", "rticles")
+pkgs <- c("tidyverse", "here", "knitr", "ggpmisc", "gt", "grateful", "base", "rticles")
 cites <- grateful::get_citations(pkgs, filename = "pkg-refs.bib", out.dir =  here("/Paper/SupplementaryMaterial/Software_citations") )
 ```
 
