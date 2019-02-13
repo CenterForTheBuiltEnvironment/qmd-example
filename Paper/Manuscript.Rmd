@@ -39,6 +39,10 @@ header-includes:
 # Currently this template is set up to knit with the author-date format from the journal "Advances in Building Energy Research", which is specified by the file above called `advances-in-building-energy-research.csl`. If you need to change the citation and bibliography style to the Elsevier template used by Elsevier journals like "Energy and Buildings", replace `advances-in-building-energy-research.csl` with `elsevier-with-titles.csl`
 ```
 
+```{r figureFontSize, echo = FALSE}
+# In the YAML header above, the font size for captions in this document is controlled by `[font={small}]` under `header-includes (note this is *larger* than the default size for this template*). For more options, see https://stackoverflow.com/questions/37136731/set-caption-font-size-for-figures-in-yaml-header-of-rmarkdown
+```
+
 
 ``` {r libraries, echo=FALSE, cache=FALSE, results="hide", message=FALSE, warning = FALSE}
 ## code chunk for libraries that are required to be installed + loaded for this template
@@ -161,13 +165,11 @@ The purpose of this (very much work-in-progress) document is to provide a comple
 # Methods (this is a 'level 1 heading')
 
 ## Markdown (this is a 'level 2 heading')
-Here are some examples of how to format text with Markdown.
+This RMarkdown document is a special type of interactive document that can contain both code chunks (in R, python, or other languages), and text written in a format called Markdown. Here are some examples of how to format text with Markdown, and a [link](https://www.rstudio.com/wp-content/uploads/2015/03/rmarkdown-reference.pdf) to an RMarkdown guide.
 
 ### Level 3 heading
 
-Here's how to **bold** or *italicize* a piece of text.
-
-This is how you do a bullet point list:
+Here's how to **bold** or *italicize* a piece of text. This is how you do a bullet point list:
 
 * First bullet
 * Second bullet
@@ -228,7 +230,7 @@ There are lots of packages that are useful for markdown docs and customizing plo
 ### Citing software
 
 ```{r include=FALSE}
-cite_packages(out.format = "md", out.dir =  here("/Paper/SupplementaryMaterial"))
+cite_packages(out.format = "md", out.dir =  here("/Paper/SupplementaryMaterial/Software_citations"), include.rmd = TRUE, all.pkg = TRUE)
 
 ```
 
@@ -247,7 +249,7 @@ You can use the `greatful` package to quickly generate a list of the packages fo
 
 ```{r include = FALSE}
 pkgs <- c("tidyverse", "here", "knitr", "stargazer", "ggpmisc", "gt", "grateful", "base", "rticles")
-cites <- grateful::get_citations(pkgs, filename = "pkg-refs.bib", out.dir =  here("/Paper/SupplementaryMaterial") )
+cites <- grateful::get_citations(pkgs, filename = "pkg-refs.bib", out.dir =  here("/Paper/SupplementaryMaterial/Software_citations") )
 ```
 
 
@@ -294,6 +296,7 @@ To
 “We tested six different table and partition configurations.”
 
 # Results
+## Scatter plot example
 Figure \@ref(fig:irises) shows petal widths by iris type.
 
 ```{r irises, message=FALSE, fig.width =8, fig.height = 4.5, fig.cap = "Petal and sepal lengths from iris dataset" }
@@ -313,7 +316,7 @@ ggplot(df, aes(x = petal_length, y = sepal_length, group = iris_class)) +
   scale_color_manual (values = cal_palette4)
 ```
 
-## Violin plot
+## Violin plot example
 Figure \@ref(fig:petalwidths) shows petal widths by iris type.
 
 ``` {r petalwidths, message=FALSE, fig.width = 6, fig.height = 4, fig.cap = "Petal widths by class" }
@@ -338,9 +341,9 @@ It is important to include a discussion of limitations in any paper. Limitations
 # Conclusion
 
 # Acknowledgements
-Don't forget to acknowledge the funder(s) with associated grant numbers if required. The same goes for folks who significantly assisted you with this paper but that are not authors. Eg "Agency (grant number 12345) supported this work, with cost share provided by the Center for the Built Environment. We thank Person1 and Person2 for assistance with data collection""
+Don't forget to acknowledge the funder(s) with associated grant numbers if required. The same goes for folks who significantly assisted you with this paper but that are not authors. Eg "Agency (grant number 12345) supported this work, with cost share provided by the Center for the Built Environment. We thank Person1 and Person2 for assistance with data collection"
 
 # Declaration of interest
-Descibe any relevant interests of the authors, particularly if there is a link to the research that is relatively uncommon and could be perceived as a conflict of interest.  Otherwise, "All authors declare no conflict of interest."
+Descibe any relevant interests of the authors, particularly if there is a link to the research that is relatively uncommon and could be perceived as a conflict of interest.  Otherwise : All authors declare no conflict of interest.
 
 # References {#references .unnumbered}
