@@ -24,6 +24,8 @@ output:
   bookdown::pdf_book:
     base_format: rticles::elsevier_article
 csl: advances-in-building-energy-research.csl
+link-citations: true
+linkcolor: blue
 geometry: "left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm"
 header-includes:
 - \usepackage{setspace}
