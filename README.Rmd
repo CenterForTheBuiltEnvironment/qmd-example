@@ -6,8 +6,6 @@ output:
         toc_depth: 4  # upto three depths of headings (specified by #, ## and ###)
 ---
 
-# 
-
 [![Binder](http://mybinder.org/badge_logo.svg)](http://mybinder.org/v2/gh/CenterForTheBuiltEnvironment/rmd-example/master?urlpath=rstudio)
 
 
