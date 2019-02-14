@@ -322,13 +322,11 @@ ggplot(df, aes(x = petal_length, y = sepal_length, group = iris_class)) +
 
 ## Violin plot example
 Figure \@ref(fig:petalwidths) shows petal widths by iris type.
-
-``` {r petalwidths, message=FALSE, fig.width = 6, fig.height = 4, fig.cap = "Petal widths by class" }
+``` {r petalwidths, message=FALSE, fig.width = 8, fig.height = 4.5, fig.cap = "Iris petal widths by species" }
 df %>%
     ggplot() + 
     geom_violin(aes( x = iris_class, y = petal_width, color = iris_class), draw_quantiles = T, trim = F, show.legend = F) +
     geom_boxplot(aes( x = iris_class, y = petal_width, color = iris_class), width = 0.07, show.legend = F)+
-    ggtitle("Petal widths by species") +
     scale_color_manual(values=cal_palette4) 
     
 ```
@@ -337,9 +335,10 @@ df %>%
 
 
 # Limitations
-It is important to include a discussion of limitations in any paper. Limitations of this template include:
+It is important to include a discussion of limitations in any paper. Some limitations of this template include:
 
-- Figures are included after the text, not at the location where they are discussed in the text
+- Whether or not figures are included inline with text appears to depend of the version of LaTeX the document is compiled with. Compiling on a computer where TinyTeX is installed (eg in the Binder associated with the reporsitory for this project on GitHub) will render the figures inline, whereas compiling the same document on a Windows computer with MikTeX installed does not
+- Does not include instructions on how to align figures
 
 
 # Conclusion
