@@ -191,6 +191,11 @@ Or an ordered option:
 Here is an example of a table created from the .csv file in the `SupplementaryMaterial/Data`folder using the `gt` package from RStudio. You can read more about `gt` [here](https://github.com/rstudio/gt), and there's helpful examples to further customize tables (eg with color, foototes, significant figures, re-labeling columns, and more) [here](https://github.com/allisonhorst/gt-awesome-tables). 
 
 ```{r irisTable}
+# The next calculation involves a random draw. Setting a seed ensures the same pseudo-random selection will be made
+# each time this document is re-run with the same seed
+# Note that deliberately varying the seed and repeating pseudo-random calculations until you achieve for example  a desired but unlikely result is not ethical research practice ('seed hacking`)
+set.seed(42)
+
 df %>% 
     sample_n(5) %>%   # select 5 random rows from the dataframe
     select(iris_class, sepal_length, petal_length, petal_length_level) %>%  # show only these columns (in this order)
@@ -303,7 +308,7 @@ To
 ## Scatter plot example
 Figure \@ref(fig:irises) shows petal widths by iris type.
 
-```{r irises, message=FALSE, fig.width =8, fig.height = 4.5, fig.cap = "Petal and sepal lengths from iris dataset" }
+```{r irises, message=FALSE, fig.width =8, fig.height = 4, fig.align='center', fig.cap = "Petal and sepal lengths from iris dataset" }
 ggplot(df, aes(x = petal_length, y = sepal_length, group = iris_class)) + 
   geom_smooth(method=lm, se=FALSE, size = 0.5, linetype = "solid", color = "darkgray") +
   geom_point(aes(color = iris_class, shape = long_sepal), alpha = 0.6, size=3) +
@@ -322,13 +327,13 @@ ggplot(df, aes(x = petal_length, y = sepal_length, group = iris_class)) +
 
 ## Violin plot example
 Figure \@ref(fig:petalwidths) shows petal widths by iris type.
-``` {r petalwidths, message=FALSE, fig.width = 8, fig.height = 4.5, fig.cap = "Iris petal widths by species" }
+
+```{r petalwidths, message=FALSE, fig.width = 5, fig.height = 3, fig.align='center', fig.cap = "Iris petal widths by species" }
 df %>%
     ggplot() + 
     geom_violin(aes( x = iris_class, y = petal_width, color = iris_class), draw_quantiles = T, trim = F, show.legend = F) +
     geom_boxplot(aes( x = iris_class, y = petal_width, color = iris_class), width = 0.07, show.legend = F)+
     scale_color_manual(values=cal_palette4) 
-    
 ```
 
 # Discussion
