@@ -233,9 +233,6 @@ There's not much else involved in citing, as the references list gets built and 
 
 The instructions for installing BetterBibtex are [here](https://retorque.re/zotero-better-bibtex/).
 
-## Other packages
-There are lots of packages that are useful for markdown docs and customizing plots. We encourage you to search for these whenever you encounter a new thing you need to do and to propose an addition to this repository accordingly. Some examples to start: `ggExtra`, `gridExtra`, `RColorBrewer`, `ggrepel`...
-
 ### Citing software
 
 ```{r include=FALSE}
@@ -255,9 +252,11 @@ You can use the `greatful` package to quickly generate a list of the packages fo
 -   knitr - @knitr
 -   tidyverse -  @tidyverse
 -   rticles - @rticles
+-   bookdown - @bookdown
+-   rmarkdown - @rmarkdown
 
 ```{r include = FALSE}
-pkgs <- c("here", "knitr", "ggpmisc", "gt", "grateful", "base", "rticles")
+pkgs <- c("here", "knitr", "ggpmisc", "gt", "grateful", "base", "rticles", "bookdown", "rmarkdown", "tidyverse")
 cites <- grateful::get_citations(pkgs, filename = "pkg-refs.bib", out.dir =  here("/Paper/SupplementaryMaterial/Software_citations") )
 ```
 
@@ -270,6 +269,9 @@ $$\sum_{i=1}^{n}{x_i^2}$$
 Here is another equation:
 
 $$ CD_{rated} = \frac{4*Q}{\pi*D^2} = 2.0~m/s$$
+
+## Other packages
+There are lots of packages that are useful for markdown docs and customizing plots. We encourage you to search for these whenever you encounter a new thing you need to do and to propose an addition to this repository accordingly. Some examples to start: `ggExtra`, `gridExtra`, `RColorBrewer`, `ggrepel`...
 
 ## Writing style
 This is a little off topic for an Rmd example but a convenient place to remind our grad students about writing style. In almost all cases, active voice is better than passive voice. Several psychological studies show that the active voice is more easily understood by readers, and that information is more accurately reported by authors when writing in active voice. For example, research @klenbortMarkednessPerspectiveInterpretation1974 has shown that the “active [voice] offers a neutral structure for conveying information”. Authorship guides for highly regarded journals often indicate a preference for the active voice instead of passive:
