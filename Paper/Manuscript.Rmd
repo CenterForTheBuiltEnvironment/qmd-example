@@ -159,7 +159,7 @@ include_graphics(here("Paper","SupplementaryMaterial","Images","Latex_logo.png")
 \pagebreak
    
 # Introduction
-The purpose of this (very much work-in-progress) document is to provide a complete R markdown template for an Elsevier journal submission (based on the rticles repository @rticles), along with useful examples and packages to improve usability for folks who are just starting out with this workflow. The eventual intent is to capture minimal examples of the common things that authors need to do when writing papers in R markdown; provide examples of useful packages, workflows, and tools; and provide solutions to common issues that folks encounter.
+The purpose of this (very much work-in-progress) document is to provide a complete R markdown template for an Elsevier journal submission (based on the [rticles](https://github.com/rstudio/rticles) repository @rticles), along with useful examples and packages to improve usability for folks who are just starting out with this workflow. The eventual intent is to capture minimal examples of the common things that authors need to do when writing papers in R markdown; provide examples of useful packages, workflows, and tools; and provide solutions to common issues that folks encounter.
 
  You may wish to have short sub-sections for:
  
@@ -188,7 +188,7 @@ Or an ordered option:
     + Item 2b
 
 ## Tables
-Here is an example of a table created from the .csv file in the `SupplementaryMaterial/Data`folder using the `gt` package from RStudio. You can read more about `gt` [here](https://github.com/rstudio/gt), and there's helpful examples to further customize tables (eg with color, foototes, significant figures, re-labeling columns, and more) [here](https://github.com/allisonhorst/gt-awesome-tables). 
+Here is an example of a table created from the .csv file in the `SupplementaryMaterial/Data`folder using the `gt` package from RStudio. You can read more about `gt` [here](https://github.com/rstudio/gt), and there's helpful examples to further customize tables (eg with color, footnotes, significant figures, re-labeling columns, and more) [here](https://github.com/allisonhorst/gt-awesome-tables). 
 
 ```{r irisTable}
 # The next calculation involves a random draw. Setting a seed ensures the same pseudo-random selection will be made
@@ -227,38 +227,50 @@ xyz = 18*2
 This is an example of outputing the result of a calculation that you perform within a code chunk in the document somewhere prior to the location where you first refer to it: `r xyz`.
 
 ## Citations
-Citing other literature is remarkably easy, just like this @coakleyReviewMethodsMatch2014. This citation key references the tag associated with an entry in Bibliography.bib (a BibTex file). I've found it easiest to use Zotero to manage my library of references and to generate the BibTex file, though any software that creates a valid BibTex file should work fine. Zotero allows you to create a 'Collection' (or folder) that gathers together all of the references used for a particular document. When combined with with the Better BibTex plugin, that collection can be exported to a BibTex file that is continually updated as you add or edit references in that Collection. Better BibTex also puts the citation key - the text after the '\@' sybmbol in the .Rmd file - on the upper right of each entry, which is convenient for adding citations. 
+### Citing literature
+Citing other literature is remarkably easy, just like this @coakleyReviewMethodsMatch2014. This citation key references the tag associated with an entry in Bibliography.bib (a BibTex file). I've found it easiest to use Zotero to manage my library of references and to generate the BibTex file, though any software that creates a valid BibTex file should work fine. Zotero allows you to create a 'Collection' (or folder) that gathers together all of the references used for a particular document. When combined with with the Better BibTex plugin, that collection can be exported to a BibTex file that is continually updated as you add or edit references in that Collection. Better BibTex also puts the citation key - the text after the '\@' symbol in the .Rmd file - on the upper right of each entry, which is convenient for adding citations. 
 
 There's not much else involved in citing, as the references list gets built and formatted automatically based on the selected style. The only other issue I've had to look around to solve was figuring out how to combine multiple citations, which is easy when you know how. [@coakleyReviewMethodsMatch2014; @zhaiHumanComfortPerceived2015a]
 
-The instructions for installing BetterBibtex are [here](https://retorque.re/zotero-better-bibtex/).
+**Step-by-step instructions for creating a new Zotero collection and adding a citation**
+1. Install BetterBibtex with the instructions [here](https://retorque.re/zotero-better-bibtex/).
+
+2. First, create a new Zotero collection for this paper in your own Zotero library. You can add existing references by dragging and dropping them into the folder for this collection, or add new references from the web with this collection highlighted. 
+
+3. In the far left Zotero pane, right-click on the folder for this collection, select "Export Collection", and selection "Better BibTeX" and the format, and tick the "Keep updated" box (this will automatically update the stored .bib file when you add new items to this collection). Save this .bib file in a location together with the document you are working on (in this repository, it's under `/Paper`)
+    - Note - the dynamic updating *only* works if you export the whole collection to one .bib file, so clicking on the items in the collection and exporting them individually or together will not work
+    
+4. To add a citation in the text, first make sure that the item is saved in the Zotero collection that is linked to the automatically-updating .bib file for your document. Then click on that item in Zotero and copy the citation key in the right-hand pane (eg *schiavonThermalComfortPerceived2017*)
+
+5. In your document, paste the citation key preceded by an @ sign, like this: `@schiavonThermalComfortPerceived2017` in the text where you want the citation to appear. If you want it wrapped in parentheses, do this `[@schiavonThermalComfortPerceived2017]` 
+
 
 ### Citing software
 
 ```{r include=FALSE}
 cite_packages(out.format = "md", out.dir =  here("/Paper/SupplementaryMaterial/Software_citations"), include.rmd = TRUE, all.pkg = TRUE)
-
 ```
 
-It is also good practice to include citations not such for literature like journal articles and reports, but also the software used in the analysis. Many software packages have accompanying publications that can be cited, and even if they don't it is important to attribute which version and which software you used. Citing software helps to provide credit for the creators and maintainors of the software and demonstrate that people (like you!) are using the software, which is especially important for open-source tools supported through public research funding. 
+It is also good practice to include citations for the software used in your analysis. After all, the software is also one of the tools you used to carry out your research. It is important to attribute which software and which versions you used you used so other people can better understand your methods. There have been cases where running the same analysis code with different versions of the same software produces different results! In addition, citing software helps to provide credit for the creators and maintainers of the software and demonstrate that people are using it, which is especially important for open-source tools supported through public research funding. Just like software often includes a `LICENSE` file, a good practice is for citation instructions to be included in a `CITATION` file associated with the project. Many software packages have accompanying publications that can be cited, and if they don't there is usually a project website or code repository. 
 
-You can use the `greatful` package to quickly generate a list of the packages for software used in an R project using the `cite_packages` function from `greatful`. There is an additional function called `get_citations` that generates the Bibtex-formatted citations for each package. It's not elegant, but you can use the first to list packages used, then generate the `pkg-refs.bib` file (saved to `/Paper/SuplementaryMaterial` by default in this template), copy the content into your overall `Bibliography.bib` file for the whole document, and then cite the packages in your document as you would another source, eg by using `@base` for an in-text citation for core R software before other packages are installed (also known as 'base R'). 
+**Instructions for adding software citations with `grateful` and Zotero**
 
--   base R - @base
--   ggpmisc - @ggpmisc
--   grateful  - @grateful
--   gt - @gt
--   here  - @here
--   knitr - @knitr
--   tidyverse -  @tidyverse
--   rticles - @rticles
--   bookdown - @bookdown
--   rmarkdown - @rmarkdown
-
-```{r include = FALSE}
-pkgs <- c("here", "knitr", "ggpmisc", "gt", "grateful", "base", "rticles", "bookdown", "rmarkdown", "tidyverse")
-cites <- grateful::get_citations(pkgs, filename = "pkg-refs.bib", out.dir =  here("/Paper/SupplementaryMaterial/Software_citations") )
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+# Example of generating BibTex file for the packages listed below
+# Note the output location is specified 
+pkgs <- c("here", "knitr", "ggpmisc", "gt", "grateful", "base", "rticles", "bookdown", 
+          "rmarkdown", "tidyverse")
+cites <- grateful::get_citations(pkgs, filename = "pkg-refs.bib",
+                    out.dir =  here("/Paper/SupplementaryMaterial/Software_citations") )
 ```
+
+5. To add software citations, you can use the `greatful` package's `get_citations` function to generate the BibTeX-formatted citation for each package. Note that all of the packages have to be loaded into your working session, and listed before calling `get_citations` for this to work. 
+
+6. Next, open the `pkg-refs.bib` file generated by `greatful` in a text editor like Notepad, highlight and copy the text, and then in Zotero with the collection for this project highlighted,  click `File` --> `Import from clipboard`. Now all the software references have been added to the .bib file that will continue to be updated for this project! 
+
+7. Cite the software somewhere in your methods section. Here's an example: 
+
+>This paper used the free and open source R statistical computing language [@base] with `tidyverse` [@tidyverse] software for all analysis, with the additional software packages `ggpmisc` [@ggpmisc] for graphics, `gt` [@gt]for tables, `here` [@here] for file path management, `grateful` [@grateful] for software citation, `rmarkdown` [@rmarkdown] for interactive notebooks, and `knitr` [@knitr], `rticles` [@rticles], and `bookdown` [@bookdown] to create a journal-formatted PDF and other markdown and html files. 
 
 
 ## Equations and math
@@ -344,7 +356,7 @@ df %>%
 # Limitations
 It is important to include a discussion of limitations in any paper. Some limitations of this template include:
 
-- Whether or not figures are included inline with text appears to depend of the version of LaTeX the document is compiled with. Compiling on a computer where TinyTeX is installed (eg in the Binder associated with the reporsitory for this project on GitHub) will render the figures inline, whereas compiling the same document on a Windows computer with MikTeX installed does not
+- Whether or not figures are included inline with text appears to depend of the version of LaTeX the document is compiled with. Compiling on a computer where TinyTeX is installed (eg in the Binder associated with the repository for this project on GitHub) will render the figures inline, whereas compiling the same document on a Windows computer with MikTeX installed does not
 - Does not include instructions on how to align figures
 
 
@@ -354,6 +366,6 @@ It is important to include a discussion of limitations in any paper. Some limita
 Don't forget to acknowledge the funder(s) with associated grant numbers if required. The same goes for folks who significantly assisted you with this paper but that are not authors. Eg "Agency (grant number 12345) supported this work, with cost share provided by the Center for the Built Environment. We thank Person1 and Person2 for assistance with data collection"
 
 # Declaration of interest
-Descibe any relevant interests of the authors, particularly if there is a link to the research that is relatively uncommon and could be perceived as a conflict of interest.  Otherwise : All authors declare no conflict of interest.
+Describe any relevant interests of the authors, particularly if there is a link to the research that is relatively uncommon and could be perceived as a conflict of interest.  Otherwise : All authors declare no conflict of interest.
 
 # References {#references .unnumbered}
