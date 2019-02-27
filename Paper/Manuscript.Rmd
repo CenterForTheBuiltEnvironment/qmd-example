@@ -206,6 +206,9 @@ df %>%
     
 ```
 
+## Spellcheck
+If you are using RStudio, press F7 or go to `Edit` --> `Check spelling` in the menu. 
+
 ## Cross-referencing
 This is how you refer to a figure in your text: Figure \@ref(fig:correlation). Simply reference the title of the code chunk, and ensure that the code chunk includes a figure caption.
 
@@ -258,8 +261,9 @@ It is also good practice to include citations for the software used in your anal
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 # Example of generating BibTex file for the packages listed below
 # Note the output location is specified 
+# Note tidyverse is not included in the list below because it's a large package to install on Binder, if you are running this on your own computer I recommend including it if you want to cite it
 pkgs <- c("here", "knitr", "ggpmisc", "gt", "grateful", "base", "rticles", "bookdown", 
-          "rmarkdown", "tidyverse")
+          "rmarkdown")
 cites <- grateful::get_citations(pkgs, filename = "pkg-refs.bib",
                     out.dir =  here("/Paper/SupplementaryMaterial/Software_citations") )
 ```
