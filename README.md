@@ -3,8 +3,8 @@ A reproducible journal article template in RMarkdown
 
 -   [Overview](#overview)
 -   [How to use this repo](#how-to-use-this-repo)
-    -   [1. Short-term and in the cloud (no installation required)](#short-term-and-in-the-cloud-no-installation-required)
-    -   [2. Longer term and on your own computer (may require installing some additional R packages and also LaTeX if you don't have it installed already)](#longer-term-and-on-your-own-computer-may-require-installing-some-additional-r-packages-and-also-latex-if-you-dont-have-it-installed-already)
+    -   [1. Short-term and in the cloud (no installation required)](#1-short-term-and-in-the-cloud-no-installation-required)
+    -   [2. Longer term and on your own computer (may require installing some additional R packages and also LaTeX if you don't have it installed already)](#2-longer-term-and-on-your-own-computer-may-require-installing-some-additional-r-packages-and-also-latex-if-you-dont-have-it-installed-already)
 -   [Contents of this repository](#contents-of-this-repository)
 -   [Troubleshooting](#troubleshooting)
     -   [Installing MikTex on Windows](#installing-miktex-on-windows)
