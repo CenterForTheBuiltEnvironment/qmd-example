@@ -1,5 +1,5 @@
 ---
-title: A reproducible journal article with RMarkdown&#58; A  building science template with examples for beginners based on the Elsevier journal format 
+title: A big change! 
 author:
   - name: Paul Raftery 
     email: p.raftery@berkeley.edu
