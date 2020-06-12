@@ -213,7 +213,7 @@ If you are using RStudio, press F7 or go to `Edit` --> `Check spelling` in the m
 This is how you refer to a figure in your text: Figure \@ref(fig:correlation). Simply reference the title of the code chunk, and ensure that the code chunk includes a figure caption.
 
 ```{r correlation, fig.width = 1, fig.cap = "Correlation. Source: XKCD, xkcd.com/552"}
-include_graphics(here("Paper","SupplementaryMaterial","Images","Correlation.png"), dpi= 500)
+include_graphics(here("Paper","SupplementaryMaterial","Images","correlation.png"), dpi= 500)
 ```
 
 ## Calculations in text
