@@ -1,0 +1,1733 @@
+---
+title: "Insights from space heating hot water systems in over 300 commercial buildings and a publicly available dataset"
+subtitle: ""
+author:
+  - Paul Raftery ^[Center for the Built Environment, University of California Berkeley, USA] ^[Correspondence to p.raftery@berkeley.edu], Rupam Singla ^[TRC], Hwakong Cheng ^[Taylor Engineering], Gwelen Paliaga ^3^ 
+date: "`r Sys.Date()`"
+#abstract: TODO We include all analysis code and all non-anonymous measured data in this paper.
+output:
+  bookdown::word_document2:
+    reference_docx: "./template.docx"
+editor_options: 
+  markdown: 
+    wrap: 72
+bibliography: references.bib
+biblio-style: apalike
+---
+
+```{r knitrsetup, include=F, cache=F}
+# knitr setup
+knitr::opts_chunk$set(echo = F, 
+                      message=F,
+                      warning=F,
+                      cache = F,
+                      dev = "jpeg",
+                      dpi=300,
+                      fig.path="figs",
+                      fig.show="hold",
+                      fig.pos="b")
+# str(knitr::opts_chunk$get()) # see for all options
+options(digits=2)
+```
+```{r library, cache=F}
+library("pacman")
+p_load(tidyverse, readxl, magrittr, lubridate, gridExtra, moments, padr, broom, here, scales, treemapify, patchwork)
+```
+```{r themesetup}
+# figure theme setup
+# set base font size for plots
+theme_set(theme_light(base_size = 10))
+# cleaner display of 'strips' above facets in plots
+theme_update(strip.background = element_rect(fill="#F5F5F5", color="grey"),
+             strip.text = element_text(color = 'black'),
+             strip.text.y = element_text(angle = 90))
+#  lighten gridlines so just visible
+theme_update(panel.grid = element_line(linetype = "dotted"))
+# define a reasonably print and color-blind friendly color palette
+# these also conveniently happen to be colors from the official UC Berkeley color palette. https://brand.berkeley.edu/identity-and-visual-design/color
+cal_palette2 <- c("#3B7EA1", "#C4820E")
+# with slight mod to dark yellow for better grayscale performance for 4 color scale
+cal_palette4 <- c("#003262", "#b0750c", "#3b7ea1", "#fdb515")
+# adding 5th color
+cal_palette5 <- c("#003262", "#b0750c", "#3b7ea1", "#fdb515", "#D9661F")
+
+
+
+```
+```{r functions}
+# All functions here
+
+
+# save a png of an image to ./figs/[name].png
+save_jpeg <- function(name, wid=16, hei=9, res=300){
+  ggsave(str_c("./figs/",name,".jpeg"), width=wid, height=hei, dpi=res)
+}
+
+# generate a timeseries data showing sup, ret,flow, hw,enab for a given building
+plot_ts <- function (df, name){
+  #operating hours
+  tag=as.character(unique(df$tag))
+  p1 = ggplot(df, aes(x=datetime)) +
+    geom_point(aes(y=as.logical(oper)), color="black", shape=3, size=0.5) +
+    scale_x_datetime(position="top")  +
+    theme(axis.title.x=element_blank()) +
+    ylab("Operating")
+  x =ggplotGrob(p1)
+  
+  if ("sup" %in% names(df) & "ret" %in% names(df)){
+    if(any(!is.na(df$sup)) & any(!is.na(df$ret))){
+      #supply and return temp
+      p2 = ggplot(df, aes(x=datetime)) +
+        geom_line(aes(y=sup), color="black") +
+        geom_line(aes(y=ret), color="darkred") +
+        geom_ribbon(aes(ymin=-Inf, ymax=Inf * oper), 
+                   color = NA, fill = "grey", alpha=0.2) +
+        scale_y_continuous("Supply (black)\nReturn (red)\n(°C, °F)", 
+                           sec.axis = sec_axis(~ . * 1.8 +32 )) +
+        theme(axis.title.x=element_blank(), axis.text.x=element_blank())
+      
+      if("sup_stpt" %in% names(df)){
+        p2 = p2 + geom_line(aes(y=sup_stpt), color="grey")
+      }
+      
+      # delta T
+      p3 = ggplot(df, aes(x=datetime)) +
+        geom_line(aes(y=sup-ret), color="darkblue") +
+        scale_y_continuous("Delta T\n(°C, °F)", 
+                           sec.axis = sec_axis(~ . * 1.8)) +
+        geom_hline(yintercept=0, color="darkgrey")+
+        theme(axis.title.x=element_blank(), axis.text.x=element_blank())
+      
+      x = rbind(x,ggplotGrob(p2),ggplotGrob(p3))
+    }
+  }
+  
+  if ("flow" %in% names(df)){
+    if(any(!is.na(df$flow))){
+      p4 = ggplot(df, aes(x=datetime)) +
+        geom_line(aes(y=flow), color="darkgreen") +
+        # geom_ribbon(aes(ymin=20, ymax=20+ 80*abs(oper-1)), 
+        #             color = NA, fill = "grey", alpha=0.2) +
+        scale_y_continuous("Flow\n(l/s, gpm)", 
+                           sec.axis = sec_axis(~ .  / 0.0630901964)) +
+        geom_hline(yintercept=0, color="darkgrey")+
+        theme(axis.title.x=element_blank(), axis.text.x=element_blank())
+      x = rbind(x,ggplotGrob(p4))
+    }
+  }
+  
+  if ("hw" %in% names(df)){
+    if(any(!is.na(df$hw))){
+      if (any(is.na(df$area))){
+        # no area available, default back to just display
+        p5 = ggplot(df, aes(x=datetime)) +
+          geom_line(aes(y=hw), color="darkorange") +
+          # geom_ribbon(aes(ymin=20, ymax=20+ 80*abs(oper-1)), 
+          #             color = NA, fill = "grey", alpha=0.2) +
+          scale_y_continuous("HW load (W, BTU/hr)", 
+                             sec.axis = sec_axis(~ . / 0.293071072)) +
+          geom_hline(yintercept=0, color="darkgrey")+
+          theme(axis.title.x=element_blank())
+        x = rbind(x,ggplotGrob(p5))   
+      } else{
+        p5 = ggplot(df, aes(x=datetime)) +
+          geom_line(aes(y=hw/area), color="darkorange") +
+          # geom_ribbon(aes(ymin=20, ymax=20+ 80*abs(oper-1)), 
+          #             color = NA, fill = "grey", alpha=0.2) +
+          scale_y_continuous("HW load\n(W/m², BTU/hr.ft²)\n", 
+                             sec.axis = sec_axis(~ . * 0.3048 * 0.3048 / 0.293071072)) +
+          geom_hline(yintercept=0, color="darkgrey")+
+          theme(axis.title.x=element_blank(), axis.text.x=element_blank())
+        x = rbind(x,ggplotGrob(p5))   
+      }
+      
+    }
+  }
+  if ("enab" %in% names(df)){
+    if(any(!is.na(df$enab))){
+      p6 = ggplot(df, aes(x=datetime)) +
+        geom_point(aes(y=as.logical(enab)), color="black") +
+        ylab("Enabled\n") +
+        theme(axis.title.x=element_blank(), axis.text.x=element_blank())
+      x =rbind(x,ggplotGrob(p6))
+    }
+  }
+  bldg_desc = with(head(df,1),
+                   paste("Tag: ",tag,
+                         ", Type: ",bldg_type,
+                         ", Climate: ",climate,
+                         ", System: ", system,
+                         ", Area: ", round(area,0)," m²", sep ="")
+  )
+  grid.arrange(x, top=paste(bldg_desc))
+  # save_jpeg(name)
+}
+
+```
+```{r read}
+# read in preprocessed dataset
+all = readRDS(here::here("./summary/all_hourly.rds"))
+
+# read in ancilliary data
+anc = readRDS(here::here("./summary/ancilliary_raw_data.rds"))
+# anc = readRDS(here::here("./summary/public_ancilliary_raw_data.rds"))]
+
+# read in metadata
+original_metadata = read_xlsx(here::here("./data/metadata.xlsx"),
+                     sheet= "IP to SI",
+                     range= "B3:AH1000")
+
+non_outlier_tags = all%>%select(tag)%>%unique
+
+md_dropped = original_metadata%>%
+  filter(tag != 0)%>%
+  filter(!is.na(tag))%>%
+  anti_join(all%>%
+               select(tag)%>%
+               unique%>%
+               mutate(tag = as.numeric(as.character(tag))))
+
+md = original_metadata%>%
+  filter(tag != 0)%>%
+  filter(!is.na(tag))%>%
+  right_join(all%>%
+              select(tag)%>%
+              unique%>%
+               mutate(tag = as.numeric(as.character(tag))))
+
+# create higher level categories for bldg_type and system
+md%<>%
+  mutate(system_hl = case_when(system == "District HW" | system == "District Steam" ~ "District",
+                               system == "Non-condensing" ~ "Boiler",
+                               system == "Condensing" ~ "Boiler",
+                               system == "Boiler" ~ "Boiler",
+                               is.na(system) ~ "Unknown",
+                               TRUE ~ system))%>%
+  mutate(bldg_type_hl = case_when(str_detect(bldg_type, "Other") ~ "Other",
+                                            bldg_type == "Office" ~ "Office",
+                                            bldg_type == "Academic/Office" ~ "Office",
+                                            str_detect(bldg_type, "Lab") ~ "Lab",
+                                            is.na(bldg_type) ~ "Unknown",
+                                            TRUE ~ bldg_type))%>%
+  mutate(decade = 10*round(year/10,0))
+
+# create (local) datetimes for each building.
+all%<>% mutate(datetime = ymd_h(str_c(dt," ",hr), tz ="America/Los_Angeles"))
+```
+# Introduction
+Most natural gas consumption in commercial buildings in the US is for space heating. Unitary systems are common in smaller buildings, whereas for medium and large commercial buildings, space heating is typically accomplished using a hydronic heating system. This heating hot water (HHW) system typically serves all heating end-uses in the building, both at the air handling unit(s) and at the terminal units in individual thermal zones or rooms. These heating hot water systems (HHW) are a substantial natural gas consumer. Though gas consumption is often less than electricity as a fraction of annual site energy consumption in many buildings, it is a large fraction of total (site & source) greenhouse gas emissions. This applies even in regions with relatively mild heating climates. For example, in California, natural gas consumption is approximately one third of site energy consumption in commercial buildings, but causes two thirds of the total (i.e., source) greenhouse gas emissions [@itronCaliforniaCommercialEndUse2006]. This is due to the large difference in the amount of carbon emissions per unit of energy between these energy sources, which is particularly large in this region.
+
+Unfortunately, HHW systems often operate inefficiently. Field studies have shown that in some cases these systems may have exceptionally poor overall efficiency [@rafteryQuantifyingEnergyLosses2018] due to a combination of issues which cascade together. Poor operational efficiency of similar systems have also been shown in field studies for single family residential boilers serving combined HHW and domestic hot water (DHW) [@bennettSpaceHeatingOperation2019; @raymentBoilerEfficiencyGas1995], and for multi-family DHW systems [@zhangMultifamilyCentralDomestic2013].
+
+One of the causes of this poor efficiency is that heating equipment in commercial buildings is typically oversized. The seasonal nature of peak heating demand in buildings combined with the need for hot water in many buildings throughout the year exacerbates this, as the annual distribution of heat loads is highly skewed with many operating hours at very low part loads. Thus, even when appropriately sized, systems typically spend most of the time operating at very low load conditions, often below the minimum operating output (or 'turndown') of the boiler. This causes the boiler to short cycle, which reduces efficiency and equipment life, and increases maintenance [@usdepartmentofenergyadvancedmanufacturingofficeMinimizeBoilerShort2012; @heseltonCyclingEfficiencyBasis1998; @petersonDesignTipsAvoid2018]. Secondary issues affecting heating equipment efficiency are that they have been shown to have slightly lower operating efficiency in practice than nominal efficiency, both in laboratory tests in larger boilers for commercial buildings [@taylorBoilerResearchProject2012; @belisoBoilerResearchProject2012] and smaller residential scale boilers [@haytonMetaanalysisBoilerTest2009]. Over time, efficiency also decreases due to issues such as scaling, poor combustion gas ratios, and lack of maintenance.
+
+A second cause is the piping distribution system served by the heating equipment, which loses heat whenever the system operates. These losses are almost always neglected in analysis, simulation, or operation of these systems. For example, the ASHRAE 90.1-2022 standard requires that 'piping losses shall not be modeled' when assessing building energy performance. However, the losses are not zero even in idealized, fully insulated conditions. In real buildings there are many sections of exposed piping, and fittings are commonly left uninsulated. A recent study measured losses of a median of 1.2 W/m² (normalized by building gross floor area) from the HHW recirculation piping in 7 large commercial buildings[@rafteryMeasuredSpaceHeating2023]. While these losses may have limited detrimental effect in very cold outdoor conditions as they (mostly) occur within the building envelope, medium and large commercial buildings typically have some demand for hot water year round so these losses also occur during the cooling season, placing additional burden on the cooling system to reject the heat which has been added to the building. Several studies have investigated these losses in other contexts in similar systems, such as [@zhangMultifamilyCentralDomestic2013] which found that an average of 33% of input natural gas energy was lost annually from DHW recirculation piping in 28 multi-family residential buildings and [@hillerHotWaterDistribution2006a] measuring these losses in laboratory conditions, further highlighting that these losses are not negligible. 
+
+The third cause is poor building automation system controls. This affects everything from the heating equipment and air handlers to the zone terminal units. At the heating equipment, there may be issues with boiler scheduling, staging, tuning, and water temperature controls, to name but a few issues commonly encountered. For example, [@katipamulaPrevalenceTypicalOperational2021] found that over 40% of the 151 buildings evaluated for retro-commissioning measures would benefit from improved supply water temperature controls. At the air handler there are opportunities to correct economizer controls, correcting outside air flow rates to those required by code (e.g. ASHRAE 62.1), closing outside air dampers during unoccupied morning warmup periods and improving supply air temperature setpoint reset controls [@rafteryEvaluationCostresponsiveSupply2018]. At the terminal unit, many HHW systems in the United States serve single-duct variable air volume systems with hot water reheat at the zone. While modern, code-compliant buildings can operate efficiently, many existing buildings operate with high minimum airflow rates and single-maximum control logic, which causes substantial and unnecessary reheat energy consumption [@stevetaylorDualMaximumVAV2012], and often will cause zones in a building to unnecessarily demand heat. For example, a study of 7 buildings and a total of 90 thousand square meters of office space measured whole building gas consumption savings ranging from 6.1% to 19.3%, along with measurably improved occupant thermal comfort surveys, from simply correcting minimum air flow rates at the terminal units [@arensASHRAEResearchProject2012]. ASHRAE Guideline 36 [@ashraeASHRAEGuideline362021] describes many of these best practice controls strategies, but few existing buildings currently operate this way. Similarly, there is evidence that issues such as passing valves at terminal units are relatively common [@carlosDetectingPassingValves2022]. A simulation study estimated that implementing these best practice controls in existing buildings will save 31% of annual HVAC energy consumption [@zhangEstimatingASHRAEGuideline2022a]. Demonstrations of these retrofits as part of a large research project measured between 53 and 60% HVAC energy savings at three sites which underwent a full controls hardware retrofit, and savings between 12 and 23% for an additional three sites that underwent a partial 'software-only' retrofit [@chengAdvancedBuildingAutomation2022]. 
+
+In order to meet decarbonization commitments (for example, in California to carbon neutrality in greenhouse gas emissions by 2045 [@brownExecutiveOrderB55182018]) we will certainly need to focus on and reduce natural gas consumption by HHW systems in commercial buildings. However, historically, these systems have received less attention than other systems in these buildings due to the relatively low cost of natural gas compared to electricity. For example, there is a substantial difference in both operating cost and complexity between a boiler and a chiller. However, as noted above, heating systems are responsible for a large fraction of greenhouse gas emissions and these systems are gaining more attention with increasing goals to reduce these emissions. 
+
+In order to fully decarbonize these systems they must be electrified and the most efficient way to do so is to use an electric heat pump. Electrifying an existing gas boiler system with an electric resistance boiler has a lower first cost and is far more practically feasible in terms of equipment dimensions, weight, and location constraints than heat pumps. Howevever, it substantially increases operating costs and may be prohibitive due to electrical service capacity constraints. More importantly, given the current and long run marginal carbon emissions for electricity grids (e.g., for USA locations [@gagnonCambium2022Scenario2023]), switching from gas to electric resistance for heating will actually increase overall carbon emissions in most locations [@brockwayEmissionsReductionPotential2018; @deetjenUSResidentialHeat2021; @walkerCarbonEnergyCost2022; @pistochiniGreenhouseGasEmission2022]. Thus, it is essential to electrify these systems using heat pump solutions that are capable of heating much more efficiently than just electrical resistance. Many of the HHW topics discussed above are relevant when considering electrifying these systems. For example, heat pumps are more efficient when operating at lower temperatures and most heat pump equipment has an upper limit beyond which it cannot supply warmer water. For example, a typical air-to-water heat pump system for commercial buildings cannot supply water much above 55°C (131°F). This poses a particularly challenging problem for many existing buildings, where the terminal equipment is typically sized using water temperatures of 70 or 80 °C at the design condition. Operating at much lower water temperatures may reduce heating capacity in the zones below what they require near heating design conditions. Similarly, the first cost, physical size, weight, and electrical service capacity of heat pump equipment all decrease in direct correlation with equipment heating capacity. Thus, better understanding the range of water temperatures and heating loads experienced in commercial buildings will also assist designers in achieving electrification goals.
+
+However, there is very limited info available in the public domain about how HHW systems in commercial buildings operate. What exists is based on simulation and associated input assumptions, or detailed measurements from a single system (or small set of them), or whole building consumption level data (i.e. utility meter) often at very coarse time resolution (typically annual, rarely monthly). There have been large scale data collection and analysis efforts for residential combined space and domestic hot water systems (e.g.[@raymentBoilerEfficiencyGas1995; @bennettSpaceHeatingOperation2019]), but the closest for commercial buildings is [@katipamulaPrevalenceTypicalOperational2021]. This reports the prevalence of a variety of HVAC energy savings opportunities identified from observing 2-4 weeks of building automation system trend data in 151 commercial buildings across the United States. However, these sources did not publish the underlying data they collected. The Building Genome project [@millerBuildingDataGenome2020] contains data from multiple buildings at the utility level, including some heating power consumption data, and did publish the dataset. However, is only contains the heating power consumption, not the temperatures at which it occurs or any other HHW system level information.
+
+The primary goals of this paper are to: 1) share a large dataset of building automation system data for heating hot water systems in commercial buildings, 2) analyze it to better understand how these systems operate in practice, and 3) identify opportunities for reducing the emissions these systems generate. It is our hope that this data can help better inform engineers, operators, and policy makers regarding how these systems really operate, the challenges and issues encountered by these systems, and the potential for reducing emissions from them.
+
+# Method
+We first performed a literature review to identify existing, publicly available datasets containing detailed timeseries data from HHW systems in commercial buildings. We were unsuccessful in finding such a resource, and thus decided to create such a dataset for use by the building science community. We reached out to a broad network of contacts to gain access to as much data as we could. This included a wide range of stakeholder organizations in the building industry, from individual building and portfolio building owners, to manufacturers,  designers, and their respective clients and past contacts. We gathered data from as many buildings as we could, standardized it into a common format, analyzed it for common patterns and relevant insights, and now present those findings in this paper. We include the dataset itself in the supplementary material for all buildings with the exceptions of X from Y (TODO) organizations that donated the data with the agreement that the raw data itself would be shared. This data is included in the high level results and figures in this paper, but as per agreements with respective donors, the underlying raw data is not present in the published dataset. Last, we also publish all of the software code used to perform the analysis (using R version 4.2.2 (TODO), create the figures, and generate the document that we submitted to the journal for review (see Supplementary Material).
+
+
+## Data available for a 'typical' HHW system using a 'typical' building automation system in a 'typical' building. 
+Custom designed and constructed hot water distribution systems in large commercial buildings vary widely in their topology, the sensors included (and their locations), what is accessible via the automation system, and what data is logged and stored by that automation system. There is no such thing as a 'typical' system or a 'typical' building in the common meaning of the word. Note that the data available for each building varies quite widely by:
+1)	The amount of information or metadata available about the building or the heating hot water system. For some buildings we know the number of boilers along with their model number, manufacturer and capacity, as well the original design temperatures, flowrates, and piping distribution type. For other buildings we have very limited information – for example, simply that it is a hot water heating system and little else other than the pointnames on the building automation system and the timeseries data itself. 
+2)	The period spanned by the timeseries data. For example, we have 5+ years of data for some buildings, spanning both pre- and post- COVID-19 pandemic. For other buildings, we have far less, for example 6 months from 2020.
+3)	The building automation system data available. For example, in some buildings we have HW flow, supply and return temperature, differential pressure, pump and boiler command data, firing rates, and setpoints. For other buildings we have far less, in some cases, just supply and return temperature. 
+
+Lastly, note here that we acquired data from existing instrumentation in buildings and as such, much of the resulting data will have a high degree of inaccuracy. However, the data is representative of the values that building operators see, as this is the same instrumentation they use for assessing performance and making decisions in their buildings. Similarly, it is the same data that the automation systems in those buildings use for controlling the HHW system.
+
+## Initial screening process
+When we first gained access to a new automation system we searched for buildings with HHW systems. We then visually screened the available data using that system's built-in visualization tools (some of which had very little functionality) to see if the instrumentation we sought was present, reporting reasonable values, and trending for at least 2 months. The minimum criteria to download the data for a HHW system was that there was supply and return water temperature data and the system used a boiler plant dedicated to a single building, or was a district system where there was a means of calculating the power consumption of the heating hot water system (e.g., a flow meter). Note that this initial screening phase dropped many candidate buildings, most commonly due to a lack of sufficient data for the required sensors (i.e., < 2 months), or missing/clearly erroneous flow meter data for buildings with district systems. We also excluded buildings that had less common heating system designs, such as those using heat pump driven equipment as part of the HHW system.
+
+The primary values of interest were:
++ Supply and return water temperature
++ HHW flow rate
++ HHW power (often called heating demand or load)
++ Gas power 
++ Indicator(s) of system status such as: boiler status, command, or firing rate; or pump command, status, speed, power, or differential pressure. 
++ Associated setpoints for these measured values.
+
+Figure \@ref(fig:exampleTS) shows an example of the timeseries data. The figure title contains some of the metadata associated with that building. The supplementary material contains a similar timeseries figure for all of the buildings included in the final dataset. (TODO)
+
+```{r exampleTS, fig.cap='Timeseries visualization of the data available for one system for one year', fig.width = 7.5,  fig.height = 10}
+all%>%
+  # filter(tag == as.numeric(all%>%sample_n(1) %>% .$tag)) %>% 
+  filter(tag == 111) %>% 
+  filter(yr==2020) %>% 
+  plot_ts("timeseries_example")
+```
+
+
+## Preprocessing the data for each HHW system
+After downloading the data, we first converted the heterogenous point names into a standard tagging format. We used the Brick schema [@balajiBrickMetadataSchema], and include a brick model for each building in the dataset [TODO]. In the majority of cases it was reasonably clear what the data represents either from the point name itself, or because we had access to schematic diagrams on the building automation system or mechanical drawings of the HHW system. However, in some cases this information was not available and uncertainty remains. For example, the return temperature sensor may be located on the return water from the building before or after a plant bypass (on the primary or secondary loop). The same applies for the location of the flow meter. In the absence of information to the contrary, we assume the most common location for these sensors based on the other buildings in the dataset for which this information was known. 
+
+The data indicating system status was even less homogenous for each HHW system. For example, in some systems pump speed command, pump variable frequency drive output frequency, boiler status, or boiler firing rate were available. Each of these contains information about the system, and we condensed these into a single indicator whether the system was 'enabled' or not. A value of 1 indicates that the system is enabled and known to be operating at that point in time, a value of 0 indicates the system the opposite, and an NA value indicates that the associated data does not conclusively determine the system state one way or the other, or no source information was available. [^1]
+
+We then converted all units to SI and stored datetimes in UTC time zone using ISO standard format. Where timeseries data was acquired more frequently than every 15 minutes, we aggregated to 15 minute intervals using the mean value. See supplementary material for an example of the data format.
+
+[^1]: For example, where boiler firing rate data is available, a non-zero firing rate reliably indicates the boiler is enabled and operating. However, a value of zero does not indicate the opposite state. The system may be enabled and operating even if the boiler is not firing, as the boiler may be short-cycling while attempting to control to setpoint. 
+
+## Preprocessing the data in aggregate
+Once we had gathered and cleaned the data from each site, we then applied a selection of filters to address a variety of different kinds of data quality issues that we identified.
+
+1. We identified (and dropped) values outside physically possible ranges of each variable. Supply and return temperatures outside 0 and 130 °C [^2], negative values of flow or power. This covers a wide variety of issues encountered, including failed sensors and also the common practice in the automation system industry of using a fixed value to indicate somehow unreliable data (e.g. -999), rather than 'NA' or 'NULL' due to limitations of the underlying data acquisition system.
+2. Some automation systems continue to report timeseries data at a constant value when data is no longer being acquired from that sensor, and it may be months before the issue is resolved, if ever. We thus dropped any non-zero values for analog variables which were consecutively identical for 3 or more samples.
+3. We identified potential outliers using a double sided median absolute deviation test.
+4. We identified times where the supply and return temperature difference was negative.
+5. We identified times where the calculated load (using a heat balance) did not match the reported load on the boiler.
+
+[^2]: Some systems operate at higher than ambient pressures and at times operate at temperatures above the boiling point of 100 °C at atmospheric pressure. 
+
+We tracked the data-points that met one or more of the above filters for each building and performed a manual trend review of any buildings where the outliers exceeded 1% of the data for that building. We also randomly selected a week-long period at four different times in each building's dataset. We manually reviewed these time periods to further ensure that the dataset was reasonable. Based on this process we identified `r nrow(md_dropped)` buildings with sufficient issues with data quality that we dropped them from the analysis dataset.
+
+## Operating status
+For the purposes of this study, we defined heating hot water systems as 'operating' whenever there was forced fluid flow in some of the piping  (i.e., a pump is running in the HHW system) and the heating equipment is likely attempting to control to a given water supply water temperature setpoint (i.e. the boiler or heat exchanger is operating, or the supply water temperature remains high). Given the variety of systems and available data per system, we needed to develop a generic method to identify operating hours that applies to all systems. We start from the assumption that the operating state is unknown. All tests apply only when the required data is available for that system, for each time period. We first assess whether there is a clear indicator that the system is not operating and assign that as the operating state. In the absence of such a non-operating indicator for any of the tests, if one of tests indicates the system may be operating, that is the assigned state at that time.
+
+1) Supply temperature less than 32 °C.
+2) Flow less than .06 l/s
+3) Flow per building area less than 0.068 µm/s (1 gpm per thousand square feet)
+4) Measured HHW load is less than 0.1 W
+5) Measured HHW load per area is less than 0.3 W/m²
+6) System status indicator (e.g. pump speeds, boiler status) indicates not enabled state.
+
+Note that in some buildings there was is no clear single indicator within the available data that the heating hot water system is operating or not. For example, in cases where only supply and return temperature data is available it is difficult to say with certainty when (or if) the system stops operating each day. Operating hours are likely overestimated for these cases as the only test above that applies is based on supply water temperature being below 32 °C. Similarly, in cases where other data is available (e.g. flow, or system status), operating hours will be underestimated if this sensor reports a zero value erroneously. 
+
+## Weather data
+We used each building's latitude and longitude to identify the  nearest NOAA weather station [@usnationaloceanandatmosphericadministrationNOAANationalCenters2022]. We then downloaded the historical outdoor air temperature time-series data at hourly intervals for that location and merged it with the HHW system data.
+
+## Metadata sources
+We gathered metadata for the building owner and operator at each site where it was feasible to do so. The sources of this information varied widely, and included asset tracking systems, spreadsheets, the building automation system, mechanical drawings. etc. This was the primary source for metadata. Additionally, for all of the buildings where location was known, we also obtained metadata information from the following datasets:
+1. Current and historical satellite imagery from Google Earth, from which we obtained estimates for floor area and year of construction estimates whenever this information could not be obtained from the contact person for each building.
+2. Google Street View imagery, from which we obtained number of floors and approximate window to wall ratio.
+3. ASHRAE Handbook of Fundamentals 2021, from which we obtained the ASHRAE climate zone and 99.6% heading design day temperature.
+4. An internet search for public information about the building.
+
+# Results and discussion
+This section presents the contents of the dataset and our findings. We often select a particular subset of buildings that are more relevant for a particular analysis, or use a report a specific set of summary statistics. However, we recognize that other subset of buildings, or different summary statistics may be of interest to the reader and thus we also include spreadsheet files with summary statistics for each variable for each building so that this information is readily available (see Supplementary Material). (TODO)
+
+## Overview of high level characteristics of the dataset
+Figure \@ref(fig:bldgsoverview) summarizes the primary characteristics, or metadata, associated with the buildings and their heating hot water systems, including the range of time spanned by the data. The supplementary material contains additional, more detailed metadata for each building. We dropped a total of `r nrow(md_dropped)` of `r nrow(md_dropped) + nrow(md)` total buildings as part of the standardized outlier detection step described above.  Individual buildings and organizations are anonymous. While there is a wide distribution of buildings by building type, size, and age, there are other aspects which are less diverse. For example, ASHRAE climate zone 3 is over-represented compared to other climates, and just under half of the buildings are located within the state of California. As another example, buildings with hot water systems served by central utility plants either directly or via heat exchangers (i.e., centralized hot water or steam systems) are over-represented versus buildings with individual boilers. This arose because this sample of buildings is one of availability and convenience. We reached out to our collective contacts to identify candidate organizations and were only successful in obtaining data from the organizations that were both able to provide it and were willing to share this with the public in some form. This led to a dataset where the majority of buildings are from organizations with a large number of buildings, and where the building types tend toward academic activities as the majority of organizations that participated were public entities such as universities or community colleges. There are also more subtle biases in the sample. For example, most of the data is from organizations with a reliable and accessible centralized repository for building automation system data. This occurred because extracting data from an _individual_ building’s automation system is less feasible to do at large scale, and in many cases we have found that these individual systems are often not be enabled to log and store data over a long time period, if logging is enabled at all. These are some of the reasons that the selective nature of this sample must be considered in any effort to extrapolate the results to other buildings or the broader U.S. commercial building stock. Other types of metadata - for example, total heating system capacity, or design supply water temperature - are also contained in the dataset where available, but as they were not available for at least half of the buildings, we do not summarize that information here. 
+
+Regarding the actual timeseries contents of the dataset, figure \@ref(fig:bldgsoverview) shows the distribution of the length of time data is available for each building. The types of timeseries data available for each building also differs. Of the `r nrow(all%>% select(tag) %>% unique())` buildings, the dataset contains `r nrow(all%>%drop_na(sup,ret) %>%  select(tag) %>% unique())` with supply and return temperature data, `r nrow(all%>%drop_na(flow) %>%  select(tag) %>% unique())` with HHW flow rate data, and `r nrow(all%>%drop_na(hw) %>%  select(tag) %>% unique())` with HHW load data in the timeseries. As above for the metadata, other timeseries data - for example pump speed, boiler firing rate, gas consumption - is also contained in the dataset, but as these were not available for at least half of the buildings, we do not summarize that information here. 
+
+```{r bldgsoverview, fig.cap='Overview of building and system metadata for the dataset. In c) the climates included in the Other category are 4C, 5B and 6A. In d) the treemap shows the high level building type and the count of buildings from each unique organization, each uniquely labeled by one or two characters, with the fill color indicating the HHW system type.', fig.width = 7.5, fig.height = 10}
+
+# histogram of buildings by year of construction
+unknown_year = md%>%group_by(year)%>%summarize(n())%>%filter(is.na(year))%>%.$`n()`
+p1 = md%>%
+  drop_na(decade)%>%
+  mutate(decade = decade)%>%
+  ggplot(aes(x=decade))+
+  geom_histogram(bins=20, fill="#0070C0", color="black")+
+  scale_x_continuous(breaks = c(1850, 1900, 1950, 2000),"Year of construction") +
+  geom_rect(xmin=2045,xmax=2055, ymin=0, ymax=unknown_year, color="black", fill="white") +
+  geom_text(aes(x=2050, y=unknown_year, label=" Unknown"), size=3, angle = 90, hjust=0) +
+  geom_vline(xintercept=2033, color="darkgrey")+
+  theme(axis.text.x.top = element_text(color = "white"))+
+  ylab("# of buildings")
+
+# histogram of buildings by gross floor area
+unknown_area = md%>%group_by(area)%>%summarize(n())%>%filter(is.na(area))%>%.$`n()`
+p2 = md%>%
+  drop_na(area)%>%
+  mutate(area = area/1000)%>%
+  ggplot(aes(x=area))+
+  geom_histogram(bins=20, fill="#0070C0", color="black")+
+  scale_x_continuous(breaks = c(0, 25, 50,75), "Floor area (thousand m\uB2)") +
+  geom_rect(xmin=78,xmax=80, ymin=0, ymax=unknown_area, color="black", fill="white") +
+  geom_text(aes(x=79, y=unknown_area, label=" Unknown"), size=3, angle = 90, hjust=0) +
+  geom_vline(xintercept=75, color="darkgrey")+
+  ylab("# of buildings")
+
+# donut chart of buildings by climate
+hsize =2
+p3 =
+  md%>%
+  mutate(var = climate)%>%
+  mutate(var = case_when(is.na(var) ~"Unknown",
+                         var == "5B" | var == "6A" | var == "4C" ~ "Other",
+                         TRUE ~ var))%>%
+  mutate(var = factor(var, levels = c("4A","2B", "3C","Other", "3B", "Unknown"))) %>% 
+  group_by(var)%>%
+  summarize(n = n())%>% 
+  ggplot(aes(x = hsize, y = n, fill = var)) +
+  scale_fill_brewer(palette = "Set2") +
+  geom_col(color = "darkgrey") +
+  geom_text(aes(label = var), size =3, color="black",
+            # nudge_x = 0, nudge_y=0,
+            position = position_stack(vjust = 0.5),
+            show.legend = FALSE, color="black") +
+  coord_polar(theta = "y") +
+  # annotate("text", x=1,y=1,label="Buildings\nper\nclimate")+
+  xlim(c(1, hsize + 0.45)) +
+  ylab("Buildings in\neach climate")+
+  #labs(title= "# of buildings by ASHRAE climate") +
+  theme(panel.background = element_rect(fill = "white"),
+        panel.border = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_blank(),
+        legend.position = "none",
+        axis.title.y = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank())
+
+# histogram of date ranges by building
+p4 = all%>%
+  group_by(tag,org,bldg_type,year,climate,system,area)%>%
+  summarize(rngdt = as.numeric(max(dt)-min(dt)))%>% #view
+  ggplot(aes(x=rngdt)) +
+  geom_histogram(fill="#0070C0", color="black", binwidth = 183) +
+  xlab("Days spanned by data") +
+  ylab("# of buildings")
+
+# treemap of buildings per org by high level system type and high level building type
+p5 =
+  md %>% 
+  group_by(org,system,bldg_type_hl)%>%
+  count(org,system,bldg_type_hl) %>% 
+  ungroup() %>% 
+  ggplot(aes(area = n, fill = system, label = str_c(org, ": ", n), subgroup=bldg_type_hl)) +
+  # ggplot(aes(area = n, fill = system, label = n, subgroup=bldg_type_hl)) +
+  geom_treemap() +
+  scale_fill_manual(values=cal_palette5)+
+  geom_treemap_subgroup_border(color="black") +
+  geom_treemap_text(colour = "white", place = "topleft",
+                    reflow = T, alpha = 0.5) +
+  geom_treemap_subgroup_text(place = "centre", grow = F, 
+                             alpha = 0.5, colour = "black", 
+                             fontface = "italic", min.size = 0)+
+  guides(fill=guide_legend(title="HHW system type")) +
+  theme(legend.position = "top")
+
+# assemble plots in one combined figure with treble relative height for the treemap (p5) 
+(p1 + p2)/ (p3 +p4) / p5 + 
+    plot_layout(nrow = 3, heights = c(1, 1, 2.5)) +
+    # plot_annotation(tag_levels = "a")
+   plot_annotation(tag_levels = c('a'), tag_suffix = ')') & 
+  theme(plot.tag.position = c(0, 1),
+        plot.tag = element_text(color="darkred"))
+# (p1 + p2 +p4) / p5 + plot_layout(nrow = 2, heights = c(1, 3))
+
+```
+
+## Operating hours
+```{r operatingdata}
+# fraction of known operating hours (as fraction of all hours, operating, not-operating, and unknown status)
+op = all%>%
+  drop_na(tag,org)%>%
+  group_by(tag,org,bldg_type,year,climate,system,area)%>%
+  summarize(operating_frac= sum(oper, na.rm =T)/n()) #%>%view
+
+op_vs_not = all%>%
+  drop_na(tag,org)%>%
+  drop_na(oper)%>%
+  group_by(tag,org,bldg_type,year,climate,system,area)%>%
+  summarize(operating_frac= sum(oper)/n(), 
+            hw_avail = sum(!is.na(hw))/n(), 
+            flow_avail = sum(!is.na(flow))/n(), 
+            enab_avail= sum(!is.na(enab))/n()) %>%
+  mutate(oper_conf = hw_avail > 0.5 | flow_avail > 0.5 | enab_avail > 0.5)
+
+op_vs_not_by_dt = all%>%
+  drop_na(t_out)%>%
+  group_by(dt,tag,org,bldg_type,year,climate,system,area)%>%
+  summarize(operating_frac= sum(oper)/n(),
+            mean_t_out = round(mean(t_out),0)) %>% 
+  ungroup()
+
+cutoff_daily_avg_temp = 20
+
+dates_gt_oat= all%>%
+  drop_na(tag,t_out)%>%
+  filter(!is.na(t_out))%>%
+  group_by(tag,dt)%>%
+  summarize(t_out = mean(t_out))%>%
+  filter(t_out>cutoff_daily_avg_temp)%>%
+  ungroup()%>%
+  select(tag,dt)
+
+op_above_cutoff_temp = all%>%
+  inner_join(dates_gt_oat, by=c("tag","dt"))%>%
+  drop_na(oper)%>%
+  group_by(tag,org,bldg_type,year,climate,system,area)%>%
+  summarize(operating_frac= sum(oper)/n()) 
+
+```
+The median HHW system operated for `r percent_format()(median(op$operating_frac))` of the total time period for which data exists for each system (See \@ref(fig:operating)). That does not include time when it is unclear whether or not the system is operating due to contradictory information in the data, or periods within the file for which no data exists at all. Comparing the fraction of known operating hours against all time periods in which the operating state is known (i.e., is either operating, or not) causes the median to increase to `r percent_format()(median(op_vs_not$operating_frac))`. `r percent_format()(nrow(op_vs_not%>%filter(operating_frac > .90))/nrow(op_vs_not))` of the systems operate > 90% of the time. While some of these buildings may be continuously occupied or may have continuous ventilation requirements (i.e., labs), many buildings are offices with typical occupancy hours and ventilation requirements. While there is relatively low confidence in determining the operating state for sites where only supply and return temperature is available, there are a limited number of sites where this is the case and removing those sites completely has a small impact; it decreases the median value to 
+`r percent_format()(median(op_vs_not %>% filter(oper_conf) %>% .$operating_frac))`. This data shows that HHW systems in many commercial buildings run almost continuously without switching off at night or weekends or during the summer. Though Figure \@ref(fig:operating) shows that on average there is some correlation with outdoor temperature, it is minimal. For example, in this dataset, the median HHW system operates `r percent_format()(median(op_above_cutoff_temp$operating_frac))` of the time on days where the daily average temperature exceeds `r cutoff_daily_avg_temp` °C. 
+
+Throughout this data gathering effort we have observed that the HHW system often operates even when the air handling units and terminal units served by that system are not operating and the building itself is not occupied. Based on our experience, interviews with other designers [@lamonBoilerRetrofitsDecarbonization2022a], and discussions with many building operators, the reasons for this vary widely, but typically include: a lack of awareness that the system was operating this way; poorly configured or implemented controls; concern that allowing the system to cool off would cause leaks from the piping system; and manual overrides that were intended to be temporary but that persist for a long time. In many discussions it is clear there is a lack of understanding of the scale of the negative energy, cost and maintenance implications of operating these systems almost continuously. 
+
+<!-- TODO: Drop or include. Note that in some buildings, though there is a genuine demand for heating continuously it is often to serve a relatively small section of the building (e.g., a building that combines office space with a small amount of lab space). -->
+
+<!-- TODO add count of buildings in each operating hour boxplot  -->
+
+```{r operating, fig.cap='a) fraction of hours spent operating for the buildings in the dataset, b) Boxplots showing the distribution of fraction of hours spent operating for each building with respect to daily average outdoor temperature within the range of -10 to + 25 C. The blue line indicates the general smoothed fit across the whole dataset.', fig.width = 7.5, fig.height= 4}
+# fraction of operating hours
+p1 = op_vs_not%>%
+  # misc options to sample a more 'representative' population for each factor
+  # all sample 1000 buildings per org, with replacement (point at which results levels off)
+  # group_by(org)%>%sample_n(1000, replace=T)%>%
+  # group_by(system)%>%sample_n(1000, replace=T)%>%
+  # group_by(bldg_type_hl)%>%sample_n(1000, replace=T)%>%
+  # group_by(as.character(10*round(year/10,0)))%>%sample_n(1000, replace=T)%>%
+  # group_by(climate)%>%sample_n(1000, replace=T)%>%
+  ggplot(aes(x=operating_frac)) +
+  geom_histogram(fill="#0070C0", color="black") +
+  geom_vline(data=.%>%ungroup()%>%summarize(md = median(operating_frac)),
+             aes(xintercept = md), color="black", linetype="dotted") +
+  geom_text(data=.%>%ungroup()%>%summarize(md = median(operating_frac)),
+            aes(x=md, label=paste("Median:",label_percent()(md)), y=Inf),
+            color="black", alpha=1, angle=90, hjust=1.1, vjust=-.5, size=3) +
+  xlab("Fraction of hours spent operating") +
+  scale_x_continuous(labels = scales::percent_format(scale = 100)) +
+  ylab("# of buildings")
+
+# op_vs_not%>%
+#   ggplot(aes(x=operating_frac)) +
+#   geom_histogram(fill="#0070C0", color="black") +
+#   geom_vline(data=.%>%ungroup()%>%group_by(oper_conf) %>% summarize(md = median(operating_frac)),
+#              aes(xintercept = md), color="black", linetype="dotted") +
+#   geom_text(data=.%>%ungroup()%>%group_by(oper_conf) %>% summarize(md = median(operating_frac)),
+#             aes(x=md, label=paste("Median:",label_percent()(md)), y=Inf),
+#             color="black", alpha=1, angle=90, hjust=1.1, vjust=-.5, size=3) +
+#   xlab("Fraction of hours spent operating") +
+#   scale_x_continuous(labels = scales::percent_format(scale = 100)) +
+#   facet_wrap(.~ str_c("Buildings where only\nsupply and return\ntemperature data\nwas available: ", !oper_conf)) +
+#   ylab("# of buildings")
+
+p2 = 
+  op_vs_not_by_dt%>%
+  ggplot(aes(x=mean_t_out, y=operating_frac)) +
+  # geom_smooth(aes(group=tag), se=F) + 
+  geom_boxplot(aes(group=mean_t_out), outlier.size = 0.5, outlier.alpha = 0.1)+ 
+  geom_smooth() +
+  # facet_wrap(.~system) +
+  coord_cartesian(xlim=c(-10,25), ylim=c(0,1)) +
+  xlab("Daily average outdoor temperature (\u00B0C)") +
+  ylab("Fraction of\nhours operating\nfor each building") +
+  theme(legend.position = c(0.3, 0.3), legend.title = element_blank())
+
+# 
+# op_vs_not_by_t_out = all%>%
+#   drop_na(t_out)%>%
+#   mutate(t_out = round(t_out,0)) %>% 
+#   group_by(t_out,tag,org,bldg_type,year,climate,system,area)%>%
+#   summarize(operating_frac= sum(oper)/n()) %>% 
+#   ungroup()
+# 
+# # p3 = 
+# op_vs_not_by_t_out%>%
+#   ggplot(aes(x=t_out, y=operating_frac)) +
+#   # geom_smooth(aes(group=tag), se=F) + 
+#   geom_boxplot(aes(group=t_out), outlier.size = 0.5, outlier.alpha = 0.1)+ 
+#   geom_smooth() +
+#   # facet_wrap(.~system) +
+#   coord_cartesian(xlim=c(-20,40), ylim=c(0,1)) +
+#   xlab("Outdoor temperature (\u00B0C)") +
+#   ylab("Average fraction of\nhours operating") +
+#   theme(legend.position = c(0.3, 0.3), legend.title = element_blank())
+
+# assemble plots in one combined figure with treble relative height for the treemap (p5) 
+(p1 + p2) + 
+  plot_layout(nrow = 1) +
+  # plot_annotation(tag_levels = "a")
+  plot_annotation(tag_levels = c('a'), tag_suffix = ')') & 
+  theme(plot.tag.position = c(0, 1),
+        plot.tag = element_text(color="darkred"))
+
+```
+
+## Load distribution
+``` {r loaddata}
+# subset to only include systems with reasonably valid data as defined by
+# measured hhw load data
+# at least 300 days spanned by that data
+# at least 8000 hours valid (i.e. not NA) hw data
+# at least 50% of all hours with (i.e. not NA)hw data
+# min outside temperature reached within 2 degC of locations heating design day 
+hws_to_include =  all%>%
+  drop_na(hw,datetime,t_out)%>%
+  group_by(tag,org) %>% 
+  summarize(rngdt = difftime(max(datetime),min(datetime),units ="hours"), 
+            min_t_out = min(t_out, na.rm=T), 
+            valid_hrs=n())%>%
+  ungroup() %>% 
+  mutate(tag=as.numeric(as.character(tag))) %>% 
+  inner_join(md%>%select(tag,t_hdd)) %>% 
+  mutate(hdd_diff = min_t_out -t_hdd) %>% 
+  mutate(hdd_diff_test = hdd_diff <2) %>% 
+  mutate(valid_frac= valid_hrs/as.numeric(rngdt)) %>%
+  mutate(rngdt_test = rngdt>350*24)%>% # date range spans at least 350 days
+  mutate(valid_frac_test = valid_frac>0.5) %>%  # at least 50% of the entire data range has valid data
+  mutate(valid_hrs_test = valid_hrs>8000) %>% # at least 8000 hours of valid data
+  mutate(include_test = valid_hrs_test & valid_frac_test & rngdt_test & hdd_diff_test) %>%
+  select(tag, org, min_t_out, t_hdd, hdd_diff, hdd_diff_test, rngdt, rngdt_test, 
+         valid_hrs, valid_hrs_test, valid_frac, valid_frac_test, include_test) 
+
+hws = all%>% 
+  drop_na(hw,datetime) %>% 
+  mutate(tag=as.numeric(as.character(tag))) %>% 
+  inner_join(hws_to_include %>% filter(include_test))
+
+# calculate various estimates of actual heating capacity required by building
+hw_maxs = hws%>%
+  drop_na(t_out, t_hdd) %>% 
+  group_by(tag,dt, system,bldg_type)%>%
+  summarize(min_t_out = min(t_out, na.rm=T), 
+            mean_t_out = mean(t_out, na.rm=T),
+            max_hw = max(hw, na.rm=T), 
+            daily_average_hw = sum(hw, na.rm=T)/24,
+            t_hdd = mean(t_hdd, na.rm=T),
+            mean_oper =  mean(oper, na.rm=T),
+            daily_sum_oper = sum(oper, na.rm=T))%>%
+  mutate(diff_to_hdd = min_t_out -t_hdd) %>% 
+  filter(diff_to_hdd <5) %>% # ensure selected day is near hdd temp to avoid atypical heating peak days (e.g. system startup during fall) 
+  drop_na(daily_sum_oper) %>% 
+  mutate(operating = round(daily_sum_oper/4,0)*4) %>% 
+  filter(operating >= 8) %>% 
+  ungroup() %>%
+  group_by(tag, system,bldg_type,operating,t_hdd) %>% 
+  summarize(max_hw_worst_day = max(max_hw, na.rm=T),
+           daily_average_hw_worst_day = max(daily_average_hw, na.rm=T),
+           peak_to_avg_frac = max_hw_worst_day/daily_average_hw_worst_day)
+
+
+
+mxs = hw_maxs%>%
+               group_by(tag) %>% 
+               filter(operating == max(operating)) %>% 
+               select(tag, 
+                      operating,
+                      max_hw_worst_day, 
+                      daily_average_hw_worst_day, 
+                      peak_to_avg_frac) %>% 
+    inner_join(md%>%
+               select(tag,b_number, b_output,b_min_turndown, redundancy)%>%
+               distinct()%>%
+               mutate(red= as.numeric(redundancy),
+                      heat_sys_capacity = case_when(is.na(red) ~ b_output*b_number, 
+                                                    TRUE ~ b_output/as.numeric(red)),
+                      min_turndown_capacity = b_output*as.numeric(b_min_turndown),
+               )
+             ) %>% 
+   mutate(min_td_as_fraction_of_max_hw = min_turndown_capacity/max_hw_worst_day)
+# mxs %>% distinct(tag) %>% view()
+
+# create variables normalizing the measured load as a fraction of the maximum
+# observed for that building,  against building floor area, against design capacity
+hws_no_nas = hws%>%
+  drop_na(hw) %>% 
+  inner_join(mxs) %>%  
+  group_by(tag)%>%
+  mutate(hw_n1 = hw/max(hw, na.rm=T),
+         hw_a = hw/area,
+         hw_o = hw/heat_sys_capacity)%>%
+  ungroup() %>% 
+  mutate(hw_n2 = hw/max_hw_worst_day,
+         hw_n3 = hw/(daily_average_hw_worst_day)) #normalize to average daily load on worst day that is near design temp and system was operating at least 12 hours
+
+# use these as filters to drop sites with unrealistic (or at very least, outlier) load data
+
+hws_with_reasonable_normalized_loads = hws_no_nas%>%
+  group_by(tag) %>% # for each bldg
+  filter(hw_n1 == 1) %>% # at the datetime with the max hw 
+  filter(hw_a >5 & hw_a < 300) %>% # sanity check hw load is reasonable on area basis
+  filter(hw_n2<5) %>%  # sanity check hw load is close to the max on days approaching hdd temps, when the system operated at least 16 hours
+  mutate(cap_ok = ifelse(is.na(hw_o) | (hw_o <2 & hw_o > 0.2),T,F)) %>%  # for rare cases where design capacity is known, sanity check peak measured hw load is within a reasonable range 
+  select(tag,hw_n1, hw_n2 , hw_n3, hw_a, hw_o, cap_ok)
+
+hws_no_nas %<>% 
+  filter(tag %in% hws_with_reasonable_normalized_loads$tag)
+
+#choose one method of normalizing load 
+hws_no_nas%<>%
+  mutate(hw_n = hw_n1)
+
+hws_skewness = hws_no_nas%>%
+  filter(oper>0) %>% 
+  group_by(tag)%>%
+  summarize(skewness= skewness(hw, na.rm=T))%>%
+  arrange(skewness)
+
+hws_quantile = hws_no_nas%>%
+  filter(oper>0) %>% 
+  group_by(tag)%>%
+  summarize(quantile= quantile(hw_n,.60, na.rm=T))%>%
+  arrange(quantile) # median bldg spends >60% of the time below 20% of max load, >30% below 10% of max load
+ 
+# hws_qs = hws%>%
+#   filter(oper>0) %>% 
+#   group_by(tag)%>%
+#   summarize(`0.1`= quantile(hw_n,.1, na.rm=T),
+#             `0.2`= quantile(hw_n,.2, na.rm=T),
+#             `0.3`= quantile(hw_n,.3, na.rm=T),
+#             `0.4`= quantile(hw_n,.4, na.rm=T),
+#             `0.5`= quantile(hw_n,.5, na.rm=T),
+#             `0.6`= quantile(hw_n,.6, na.rm=T),
+#             `0.7`= quantile(hw_n,.7, na.rm=T),
+#             `0.8`= quantile(hw_n,.8, na.rm=T),
+#             `0.9`= quantile(hw_n,.9, na.rm=T)) %>%
+#   pivot_longer(names_to="quantile", values_to = "PLR", cols=-tag) 
+
+# calculate cumulative load distibutions for each building in bins of 1% of max normalized load
+hws_cumul = 
+  hws_no_nas%>%
+    filter(oper>0) %>%
+    group_by(tag) %>% 
+    mutate(hw_frac_total = 1/n(),
+           binned_plr = round(hw_n*100,0)/100)%>%
+    group_by(tag,binned_plr) %>% 
+    arrange(tag,binned_plr) %>% 
+    summarize(hw_served = sum(hw_frac_total)) %>%
+    mutate(cumul_hw_served = cumsum(hw_served))
+# hws_cumul %>% filter(binned_plr %in% c(0.1,0.25,0.4, 0.5,0.6,0.75, 0.9)) %>% group_by(binned_plr) %>% summarize(median(cumul_hw_served))
+
+# identify example based on degree of skew in the load data
+# q1 = hws_skewness%>%filter(abs(skewness- quantile(skewness,0.25)) < 0.015) %>% slice_sample(n=1) %>% mutate(q = str_c("25th %tile, tag: ", .$tag))
+
+oper_med  = median(hws_cumul %>% filter(binned_plr == 0.5) %>% .$cumul_hw_served)
+oper_0.1  = median(hws_cumul %>% filter(binned_plr == 0.1) %>% .$cumul_hw_served)
+
+```
+The dataset contains measured HHW load data for `r hws_to_include %>% nrow` HHW systems. For the analysis in this section, we subset the data to select systems where the measured load distribution spans a reasonable range of the conditions expected to be experienced by that building. We did this by filtering for systems with data spanning at least 350 days that experienced outdoor temperatures that approached the heating design day temperature, defined as at least one hour where the outdoor temperature was no more than 2 °C above the 99.6% heating design day for that location. This filter yielded a total of `r hws_to_include %>% filter(include_test) %>% nrow` systems. We additionally subset the dataset to include sites where the maximum measured load is reasonable on both a floor area basis (defined as between 10 and 200 W/m²), and a part load basis (between 0.2 and 1.2 times the total system heating capacity) where the associated metadata is available. Further, we calculate the maximum measured load at times that approach design day heating temperatures; where the mean daily outdoor temperature is within 5 °C of the 99.6 percentile heating design day for that location and the system operates for at least 16 hours on that day. Last, we subset the data further to remove sites where the maximum load outside of this period is more than 50% higher than the maximum load at times that approach heating design day temperatures. This last step is both to remove measurement outliers and to remove very unusual conditions, such as transient peaks that occur after prolonged system shutdowns. Overall, this filtering process reduces the number of systems to `r hws_no_nas %>% distinct(tag) %>% nrow`
+
+Almost all buildings (`r hws_skewness %>% filter(skewness >0) %>% nrow` of `r hws_skewness %>% nrow`) have right-skewed HW load distributions when operating. \@ref(fig:loadfigs)) (a) shows an example of the load distribution for three buildings, selected approximately based on the 25th, 50th and 75th percentile by skewness. Though skewness is expected for these distributions, the degree is quite high (median value: `r median(hws_skewness$skewness, na.rm=T)`), meaning that the majority of these systems spend most of the time operating at relatively low loads, with rare periods at relatively high loads. Thus, ensuring a system can operate efficiently at low load is a key aspect of performance. However, few systems are designed to operate efficiently below 10% of design capacity despite the fact that loads are frequently below this. For context, the dotted vertical line indicates the actual minimum turndown for each of these systems, each of which has 5% turndown capability and at least 2 boilers (i.e. they can still operate at 2.5% of system design capacity or below). Even with this exceptionally low turndown capability there are a substantial number of operating hours below minimum turndown which will cause these systems to short cycle. 
+
+Figure \@ref(fig:loadfigs)) (b) shows the load distribution of all of the systems normalized to its maximum load. The median building building spends `r percent(oper_med)` of the time operating at loads at or below 50% of the maximum load experienced by that building and `r percent_format()(median(hws_cumul %>% filter(binned_plr == 0.1) %>% .$cumul_hw_served))` of the time operating at loads below 10% of the maximum load.
+
+For several systems we also have metadata describing the heating system in detail and use that data to assess how the measured maximum heating load compares to the design capacity of the system. Figure \@ref(fig:loadfigs)) (c) shows this relationship. In cases where information regarding the redundancy requirements was available, we incorporated that into the figure. If a building has two boilers each known to be sized to 100% capacity (i.e., an 'n+1' design requirement), we plot the design capacity, not the installed capacity. However, if a building has two boilers and the redundancy requirement is unknown, we use the total installed capacity. This shows that heating systems are typically sized far larger (by approximately a factor of 2) than the observed maximum load that they experience in actual, real-world operating conditions. 
+
+Together, the above two points indicate that multiple pieces of smaller, accurately sized and appropriately staged heating equipment with low minimum turn down capabilities (e.g. 10:1 or 20:1) are key components of an efficient heating system design. This is particularly important for systems that have a high redundancy requirement. For systems with true 'n+1' requirements, we recommend 3 or more pieces of equipment to ensure sufficient turndown capability to minimize short-cycling.
+
+We also assess how much of the load experienced by a system could be served by a single piece of equipment of different sizes (see Figure \@ref(fig:loadfigs)) (d)). This shows that a relatively small piece of equipment can serve a surprisingly large fraction of the annual HHW load. For example, for the median building by skewness of load distribution, a heat pump sized to just 33% of the peak load experienced by that building could serve 86% of the annual load [^3]. Considering the oversizing found in (c), in many buildings, this could be less than 20% of typically installed system capacity. This indicates that there is substantial potential to cost-effectively reduce carbon emissions using hybrid system designs which combine a small electric heat pump with a larger boiler.
+
+Last, hourly load profiles show that some buildings operate with a night time setback or shutdown even on days when the observed maximum load occurs. These exhibit a noticeable peak in the early morning caused by HHW system warm-up, air handlers switching to occupied mode (i.e. increasing ventilation load), and terminal units coming out of night setback. This peak is relatively transient and load decreases substantially later in the day. In stark contrast, other buildings operate in occupied mode continuously on these peak load days do not exhibit a noticeable peak. Thus, how the HHW system, air handlers, and terminal units are controlled has a substantial influence on the peak heating load that the building will experience. For buildings that do not have a continuous operation requirement, designers could design control sequences to take advantage of this to operate the entire building continuously on days approaching heating design day conditions. This would flatten the heating load profile, reduce the peak load, allow smaller overall design capacities, and reduce both first cost and equipment footprint.
+
+[^3]: This assumes the heat pump operates as the lead piece of equipment, that it can operate in tandem with the remaining pieces of equipment, and that it can operate over a suitable range of return and supply temperatures.
+```{r loadfigs, fig.cap='a) Load histograms for three example buildings, selected based on the lower, median, and upper quartile by skewness, b) cumulative fraction of operating hours by normalized HHW load, c) overview of building and system metadata for the dataset, d) cumulative fraction of HHW load by normalized HHW load for three example buildings in a)', fig.width = 7.5,  fig.height = 10}
+#TODO: add minimum turndown where known, highlight those buildings. quantify in text
+p1 = hws_no_nas %>%
+  filter(tag %in% c(28, 62, 315)) %>%  #tags 28, 62, and 315 are close to the q1,2&3 by skewness and have boiler size info
+  filter(oper>0) %>%
+  inner_join(md %>% drop_na(b_min_turndown) %>%select(tag,b_min_turndown,b_output))%>% 
+  ggplot(aes(x=hw/area))+
+  geom_histogram(fill="#0070C0", color="black") +
+  # facet_wrap(paste(tag, org, bldg_type, system, "min turndown:",percent_format()(as.numeric(xxx$b_min_turndown))) ~ ., scales = "free")+
+    facet_wrap(tag ~ ., scales = "free")+
+  # labs(title = "Median buildings by skew of heating load distribution when operating")+
+  geom_vline(data=. %>% distinct(tag,b_min_turndown,b_output,area), 
+             aes(xintercept = b_output*as.numeric(b_min_turndown)/area),
+             linetype="dotted")+
+  # geom_text(data=. %>% distinct(tag,b_min_turndown,b_output,area), 
+  #               aes(label = b_min_turndown, x= b_output*as.numeric(b_min_turndown)/area, y= 1)) +
+  scale_x_continuous("HW load per floor area (W/m², top: BTU/hr.ft²)",
+                     sec.axis = sec_axis(~ . * 0.3048 * 0.3048 / 0.293071072)) +
+  ylab("Count of 1-hour data")
+
+# cumulative hours w.r.t max-normalized load
+p2 = 
+  hws_cumul %>% 
+  ggplot(aes(x=binned_plr, y= cumul_hw_served))+
+  geom_line(aes(group=tag),alpha=0.2, color="darkgrey", linewidth= 0.5) +
+  xlab("Heating load normalized to max") +
+  ylab("Cumulative fraction of operating hours") +
+  expand_limits(x=0,y=0) + 
+  geom_smooth(color="blue",se=F, linewidth=1)
+
+p3 = hws_no_nas%>%
+  filter(oper>0) %>%
+  drop_na(hw) %>% 
+  # inner_join(hws_no_nas_with_reasonable_normalized_loads) %>%
+  inner_join(md %>% 
+               select(tag, system_hl, bldg_type_hl,redundancy,b_output, b_number) %>% 
+               distinct()%>%
+               mutate(red= as.numeric(redundancy),
+                      heat_sys_capacity = case_when(is.na(red) ~ b_output*b_number, 
+                                                    TRUE ~ b_output/as.numeric(red)))) %>% 
+  filter(!is.na(b_output) & !is.na(b_number) & !is.na(area)) %>% 
+  group_by(tag,system, bldg_type, bldg_type_hl,system_hl,heat_sys_capacity,redundancy,red) %>% 
+  summarize(hw_a = max(hw_a, na.rm=T),
+            hw_ca = max(heat_sys_capacity/area, na.rm=T)) %>% 
+  mutate(red_avail = ifelse(is.na(red),F,T)) %>%
+  ggplot(aes(x=hw_ca, y= hw_a))+
+  geom_point(aes(color=bldg_type_hl,shape=red_avail), size=3)+
+  geom_abline(slope=1,intercept=0, linewidth=1, color="darkgrey")+
+  # geom_abline(slope=0.5,intercept=0, linewidth=1, color="grey", linetype="dashed")+
+  expand_limits(x=0,y=0)+
+  expand_limits(x=450,y=450)+
+  # coord_cartesian(xlim=c(0,120), ylim=c(0,120))+
+  geom_smooth(method="lm", formula = y ~ 0 + x, linewidth=1) +
+  # ylab("Maximum load (W/m²)") +
+  # xlab("Total capacity (W/m²)") +
+  # scale_color_manual(values=cal_palette4) +
+  scale_x_continuous("Installed HHW capacity\n(W/m², top: BTU/hr.ft²)",
+                     sec.axis = sec_axis(~ . * 0.3048 * 0.3048 / 0.293071072)) +
+  scale_y_continuous("Max HHW load in dataset\n(W/m², right: BTU/hr.ft²)",
+                     sec.axis = sec_axis(~ . * 0.3048 * 0.3048 / 0.293071072))+
+  guides(color=guide_legend(title="Building type"),
+         shape=guide_legend(title="Known redundancy")) + 
+  theme(legend.position = c(.35, .7),
+        legend.title=element_text(size=8), 
+        legend.text=element_text(size=7),
+        legend.spacing=unit(.01, "in"),
+        legend.margin=margin(.01, .01, .01, .01, "in"),
+        legend.box="horizontal")
+  
+
+p4 = hws_no_nas%>%
+  filter(tag %in% c(28, 62,315), oper>0) %>%
+  group_by(tag) %>% 
+  # filter(tag %in% c(q1,q2,q3)) %>% 
+  mutate(hw_frac_total = hw_n/sum(hw_n),
+         binned_plr = round(hw_n*100,0)/100)%>%
+  mutate(hp_frac_total_2 = if_else(hw_n >0.2, 0.2/sum(hw_n),hw_n/sum(hw_n)),
+         hp_frac_total_3 = if_else(hw_n >0.33, 0.33/sum(hw_n),hw_n/sum(hw_n)),
+         hp_frac_total_5 = if_else(hw_n >0.5, 0.5/sum(hw_n),hw_n/sum(hw_n)),)%>% 
+  group_by(tag,binned_plr) %>% 
+  arrange(tag,binned_plr) %>% 
+  summarize(n= n(),
+            hw_served = sum(hw_frac_total),
+            hw_served_hp_2 = sum(hp_frac_total_2),
+            hw_served_hp_3 = sum(hp_frac_total_3),
+            hw_served_hp_5 = sum(hp_frac_total_5))%>%
+  mutate(cumul_hw_served = cumsum(hw_served),
+         cumul_hw_served_hp_2 = cumsum(hw_served_hp_2),
+         cumul_hw_served_hp_3 = cumsum(hw_served_hp_3),
+         cumul_hw_served_hp_5 = cumsum(hw_served_hp_5)) %>%  
+  ggplot(aes(x=binned_plr))+
+  geom_line(aes(y= cumul_hw_served_hp_2), alpha=0.4, color="darkgreen")+
+  geom_text(aes(x = 0.2, y = 0.05, label = "20%\npeak"), color = "grey", alpha=0.4, size=3) + 
+  geom_text(data = . %>% filter(binned_plr == 1) %>% select(binned_plr,cumul_hw_served_hp_2),
+            aes(x = binned_plr-0.08, y = cumul_hw_served_hp_2+0.025, 
+                label = str_c(signif(cumul_hw_served_hp_2,2)*100, "%")), 
+            color = "darkgreen", alpha=0.4, size=3) +
+  
+  geom_line(aes(y= cumul_hw_served_hp_3), alpha=0.6, color="darkgreen")+
+  geom_text(data = . %>% filter(binned_plr == 1) %>% select(binned_plr,cumul_hw_served_hp_3),
+            aes(x = binned_plr-0.08, y = cumul_hw_served_hp_3+0.025, 
+                label = str_c(signif(cumul_hw_served_hp_3,2)*100, "%")), 
+            color = "darkgreen", alpha=0.6, size=3) +
+  geom_text(aes(x = 0.33, y = 0.05, label = "33%\npeak"), color = "grey", alpha=0.4, size=3) + 
+  geom_line(aes(y= cumul_hw_served_hp_5), alpha=0.8, color="darkgreen")+
+  geom_text(aes(x = 0.5, y = 0.05, label = "50%\npeak"), color = "grey", alpha=0.8, size=3) +
+  geom_text(data = . %>% filter(binned_plr == 1) %>% select(binned_plr,cumul_hw_served_hp_5),
+            aes(x = binned_plr-0.08, y = cumul_hw_served_hp_5+0.025, 
+                label = str_c(signif(cumul_hw_served_hp_5,2)*100, "%")), 
+            color = "darkgreen", alpha=0.8, size=3) +
+  
+  geom_line(aes(group=tag, y= cumul_hw_served), alpha=1)+
+  geom_segment(x= 0.2, y=0.15, xend=0.2, yend= 0.3, alpha=0.4, linetype="dashed", color="lightgrey")+
+  geom_segment(x= 0.33, y=0.15, xend=0.33, yend= 0.5, alpha=0.6, linetype="dashed", color="lightgrey")+
+  geom_segment(x= 0.5, y=0.15, xend=0.5, yend= 0.7, alpha=0.8, linetype="dashed", color="lightgrey")+
+  scale_x_continuous(breaks=seq(from=0, to=1, by=0.2)) +
+  # geom_smooth(color="blue",se=F)+
+  facet_wrap(.~tag) +
+  xlab("Heating load normalized to max") +
+  ylab("Cumulative fraction of total load")
+
+
+# assemble plots in one combined figure
+p1/(p2 + p3) /p4 + plot_layout(nrow = 3) +
+   plot_annotation(tag_levels = c('a'), tag_suffix = ')') & 
+   theme(plot.tag.position = c(0, 1),
+        plot.tag = element_text(color="darkred"))
+
+```
+
+## Supply temperatures
+```{r supplytempdata}
+
+# define threshold for a low and high iqr for supply temperature 
+iqr_threshold_lo = 5
+iqr_threshold_hi = 15
+
+# subset to only include systems with reasonably valid data as defined by
+# measured sup data
+# at least 300 days spanned by that data
+# at least 8000 hours valid (i.e. not NA) sup data
+# at least 50% of all hours with (i.e. not NA) sup data
+# min outside temperature reached within 2 degC of locations heating design day 
+sups_to_include =  all%>%
+  drop_na(sup,datetime,t_out,oper)%>%
+  group_by(tag,org, system) %>% 
+  summarize(rngdt = difftime(max(datetime),min(datetime),units ="hours"),
+            min_t_out = min(t_out, na.rm=T), 
+            valid_hrs=n())%>%
+  ungroup() %>% 
+  mutate(tag=as.numeric(as.character(tag))) %>% 
+  inner_join(md%>%select(tag,t_hdd)) %>% 
+  mutate(hdd_diff = min_t_out -t_hdd) %>% 
+  mutate(hdd_diff_test = hdd_diff <2) %>% 
+  mutate(valid_frac= valid_hrs/as.numeric(rngdt)) %>%
+  mutate(rngdt_test = rngdt>350*24)%>% # date range spans at least 350 days
+  mutate(valid_frac_test = valid_frac>0.5) %>%  # at least 50% of the entire data range has valid data
+  mutate(valid_hrs_test = valid_hrs>8000) %>% # at least 8000 hours of valid data
+  mutate(system_test = system != "Boiler" & system != "Non-condensing") %>%
+  mutate(include_test = valid_hrs_test & valid_frac_test & rngdt_test & hdd_diff_test & system_test) # %>% view
+
+# also identify and flag if a given site has a lo or high sup IQR when operating
+sups_overview = all%>%
+  drop_na(sup,datetime,t_out,oper)%>%
+  filter(oper>0) %>% 
+  group_by(tag,org, system) %>% 
+  summarize(iqr = IQR(sup), med = median(sup))%>%
+  ungroup() %>% 
+  mutate(tag=as.numeric(as.character(tag))) %>% 
+  inner_join(sups_to_include) %>% 
+  mutate(iqr_lo = iqr <= iqr_threshold_lo, iqr_hi = iqr >= iqr_threshold_hi)
+
+sups = all%>% 
+  drop_na(sup,datetime,oper) %>% 
+  filter(oper>0) %>% 
+  mutate(tag=as.numeric(as.character(tag))) %>% 
+  inner_join(sups_to_include %>% filter(include_test))
+  
+sup_stpts_overview = sups %>% 
+  drop_na(sup_stpt)%>%
+  filter(oper >0) %>% 
+  mutate(sup_ctrl_error = sup_stpt - sup) %>% 
+  group_by(tag,org,system) %>% 
+  summarize(iqr = IQR(sup_stpt),
+            sd_ctrl_error = sd(sup_ctrl_error), 
+            iqr_ctrl_error = IQR(sup_ctrl_error)) %>%
+  mutate(iqr_lo = iqr <=iqr_threshold_lo) %>% 
+  ungroup()
+```
+Most HHW systems operate most efficiently when they supply water at the lowest temperature that will meet the requirements of all end-uses in the building. This both minimizes distribution heat losses and improves equipment efficiency for most heating equipment. Best practice controls achieve this by decreasing, or 'resetting', the supply temperature setpoint in response to decreasing demand from individual terminal units, decreasing measured load, or increasing outdoor air temperature. Though standards [@ashraeASHRAEStandard902019] require hot water temperature reset controls, they may not be present in older systems, may be configured incorrectly, or an operator may manually overwrite the setpoint to a fixed value. There is no publicly available data that reports actual supply temperatures, or how much it varies in real systems and thus, we quantify that here. Supply temperature data was available for the vast majority of systems (`r sups_overview %>% nrow` of `r md %>% nrow`) in this dataset. Of these `r sups_overview %>% filter(include_test) %>% nrow` span at least 350 days of data and reach an outdoor temperature within at least 2 °C of the heating design day and use either a condensing boiler or a district system. The median supply temperature of the median system in this subset was `r sups_overview %>% filter(include_test)%>% summarize(median(med))` °C when operating, with half of systems having a median supply temperature between `r sups_overview %>% filter(include_test)%>% summarize(quantile(med, .25))` and `r sups_overview %>% filter(include_test)%>% summarize(quantile(med, .75))` °C. However, as noted above, there are some organizations that provided data from many buildings and which use district hot water systems. These tend to have very similar supply temperatures, and thus bias this metric. After undersampling to randomly select one building per organization, the median supply temperature of the median system decreases to `r sups_overview %>% filter(include_test)%>% group_by(org) %>% slice_sample(n=1) %>% ungroup() %>% summarize(median(med))` °C when operating, with half of systems having a median supply temperature between `r sups_overview %>% filter(include_test)%>% group_by(org) %>% slice_sample(n=1) %>% ungroup() %>% summarize(quantile(med,.25))` and `r sups_overview %>% filter(include_test)%>% group_by(org) %>% slice_sample(n=1) %>% ungroup() %>% summarize(quantile(med,.75))` °C. 
+
+In addition to the measured supply temperature, the dataset also contains supply temperature setpoint for `r sup_stpts_overview %>% nrow` systems. Of these, `r sup_stpts_overview %>%filter(iqr_lo)%>% nrow ` have setpoints with an IQR of 5 degrees, thus indicating that the setpoint itself rarely changes for those buildings. Where we have both the setpoint and measured value, we can quantify how closely the system can maintain that setpoint given it's control dynamics and system disturbances. The control error (i.e., the setpoint - actual temperature) for the median of these systems has an IQR of `r sup_stpts_overview %>% summarize(median(iqr_ctrl_error))` and a standard deviation of `r sup_stpts_overview %>% summarize(median(sd_ctrl_error))`. 
+
+Of the systems with supply temperature data,`r sups_overview %>% filter(include_test & iqr_lo)%>%nrow` of `r sups_overview %>% filter(include_test) %>% nrow` had an interquartile range of less than 5 °C, indicating that supply temperatures changes little in practice in those buildings, particularly considering the supply temperature variation caused by control dynamics alone. On the other side of the scale, `r sups_overview %>% filter(include_test & iqr_hi)%>%nrow` of the systems have an interquartile range over `r iqr_threshold_hi` °C. This subset of systems that show a reasonably wide range of supply temperatures typically also show a negative correlation between supply temperature and outdoor temperature and heating hot water load (when that data is also available). However, even within this subset there are some systems where there is no clear, consistent correlation; the wide range of temperatures is due to rare step changes in temperature (i.e., operator override) rather than a functional reset. Overall we identified just  `r sups_overview %>% filter(include_test & iqr_hi)%>%nrow - 19` or `r sups_overview %>% filter(include_test) %>% nrow` systems had a consistent correlation with outdoor temperature over a substantial range of supply temperatures (i.e. IQR > `r iqr_threshold_hi` °C).
+
+```{r supplytempplots, fig.cap = "Supply temperature figures", fig.width = 7.5,  fig.height = 10}
+
+# plot histogram showing IQRs of all included sites
+p1 = sups_overview %>% 
+  filter(include_test) %>% 
+  ggplot(aes(x=iqr)) +   
+  geom_histogram(fill="#0070C0", color="black") +
+  scale_x_continuous("Interquartile range of supply temperature (°C, top: °F)", 
+                           sec.axis = sec_axis(~ . * 1.8)) +
+  geom_vline(xintercept=iqr_threshold_lo, linetype="dotted", color="black")+
+  geom_vline(xintercept=iqr_threshold_hi, linetype="dotted", color="black")+
+  ylab("Count of buildings")
+
+
+# subset shows a sample of one building per org 
+# where IQR of sup exceeds iqr_threshold_hi degrees
+subs_s = sups_overview %>% filter(include_test, iqr_hi) %>% group_by(org) %>% slice_sample(n=1)
+# show cumulative fraction of time at given sup
+p2 = 
+  sups%>%
+  inner_join(subs_s) %>% 
+  group_by(tag,org) %>% 
+  mutate(frac_total = 1/n(),
+         binned = round(sup,0))%>%
+  group_by(tag,org,binned) %>% 
+  arrange(tag,binned) %>% 
+  summarize(frac_total = sum(frac_total)) %>%
+  mutate(cumul_frac_total = cumsum(frac_total)) %>%
+  ggplot(aes(x=binned, y= cumul_frac_total))+
+  geom_line(aes(group=tag),alpha=0.8, color="darkgrey", linewidth= 0.5) +
+  scale_x_continuous("Supply temperature (°C, top: °F)", 
+                           sec.axis = sec_axis(~ . * 1.8 +32 )) +
+  ylab("Fraction of total operating hours")
+
+
+# show linear regression between daily sup and mean OAT for subset
+p3 =
+  sups%>%
+    drop_na(t_out) %>% 
+    inner_join(subs_s) %>%
+    group_by(tag,dt) %>% 
+    summarize(t_out=round(mean(t_out, na.rm=T),0),
+              sup=mean(sup, na.rm=T)) %>%
+    mutate(tag = as.numeric(as.character(tag))) %>%
+    inner_join(md %>% select(tag, system, bldg_type_hl,org)) %>%
+    ungroup() %>%
+    ggplot(aes(x=t_out, y=sup)) +
+    geom_point(aes(group=tag), alpha=0.1, size=0.5) +
+    geom_smooth(method="lm")+
+    facet_wrap(paste(tag, org, system) ~ . ) +
+    scale_x_continuous("Daily mean outdoor temperature (°C, right: °F)",
+                             sec.axis = sec_axis(~ . * 1.8 +32 ))+
+    scale_y_continuous("Daily mean supply temperature when operating (°C, right: °F)",
+                             sec.axis = sec_axis(~ . * 1.8 +32 ))
+
+
+# 'good' reset: 117,295
+# operator override and reset: 114
+# operator override and constant: 128
+# pretty much constant, with IQR >15: 303, 308,
+# pretty much constant, with low IQR >15: 303, 308,
+
+
+p4 =  sups %>% 
+  drop_na(t_out) %>% 
+  inner_join(sups_overview %>% filter(include_test) %>% slice(0:25)) %>% 
+  ggplot(aes(x=t_out, y=sup)) +
+  geom_point(data=. %>%group_by(tag,yr) %>% slice_sample(n=1000), alpha=0.2, size=0.5)+
+  geom_smooth(aes(group=yr),method="lm")  +
+  facet_wrap(paste(tag, org, system, round(iqr)) ~ . )
+
+(p1 + p2) + plot_layout(nrow = 1) +
+   plot_annotation(tag_levels = c('a'), tag_suffix = ')') & 
+   theme(plot.tag.position = c(0, 1),
+        plot.tag = element_text(color="darkred"))
+
+```
+
+
+## Temperature differences
+```{r dTdata}
+deltaT = all%>%
+  drop_na(sup,ret) %>% 
+  filter(oper >0) %>%
+  mutate(deltaT=sup-ret)
+
+ndeltaT = deltaT %>% distinct(tag) %>% tally() %>% .$n
+
+deltaT_summary = 
+  deltaT %>% 
+  group_by(tag) %>% 
+  mutate(med = median(deltaT)) %>% 
+  ungroup() %>% 
+  summarize(m = median(med), q1 = quantile(med, 0.25), q3 = quantile(med, 0.75))
+
+design_deltaTs = md%>%
+  drop_na(design_supply, design_return) %>% 
+  mutate(design_deltaT = design_supply - design_return) %>% 
+  mutate(tag = as.numeric(tag)) %>% 
+  select(tag, design_deltaT)
+
+n_designDTs = design_deltaTs %>% distinct(tag) %>% tally() %>% .$n
+  
+```
+The dataset contains both supply and return temperature for the vast majority of systems (`r ndeltaT` of `r nrow(md)`), which allows us to evaluate supply and return temperature difference, or delta T, of these systems. The median delta T of the median system was `r deltaT_summary$m` °C when operating, with half of systems having a median supply temperature between `r deltaT_summary$q1` and `r deltaT_summary$q3` °C. 
+Most systems exhibited a correlation between delta T and the measured load on the systems, though the slope and fit of these models varied widely between systems.
+
+The dataset also contains the design temperature difference for `r n_designDTs ` buildings. Figure \@ref(fig:dTfigs) shows that the median temperature difference when operating is a little less than half the design temperature difference for these buildings on average, though there is substantial variation between buildings.
+
+```{r dTfigs, fig.cap= "Temperature difference figures", fig.width=7.5, fig.height=10}
+# filter out buildings with condensing boilers, and data with valid return temps where the system is operating
+
+p1 = 
+deltaT%>%
+  group_by(tag,system) %>%
+  summarize(deltaT = median(deltaT)) %>%
+  ungroup() %>%
+  ggplot(aes(x=system,y=deltaT)) +
+  geom_violin(draw_quantiles = c(0.1,0.25, 0.5, 0.75, 0.9)) +
+  xlab("HHW system type") +
+  ylab("Median temperature differences for each building (°C)")
+
+tags_of_interest = all%>%
+  drop_na(sup,ret,hw,area) %>%
+  group_by(org) %>% 
+  distinct(tag) %>%
+  slice_sample(n=1) %>% .$tag
+
+# deltaT wrt hw load
+# deltaT%>%
+#   drop_na(sup,ret,hw,area) %>% 
+#   filter(tag %in% sample(tags_of_interest,9)) %>% 
+#   filter(hw >0) %>%
+#   group_by(tag)%>%
+#   # view
+#   ggplot(aes(x=hw/area,y=deltaT,group=tag)) +
+#   geom_point(data=. %>% slice_sample(n=1000), alpha= 0.1) +
+#   geom_smooth(se=F) +
+#   facet_wrap(paste(tag, org, system) ~ ., scales="free") +
+#   scale_x_continuous("HW load per floor area (W/m², top: BTU/hr.ft²)",
+#                      sec.axis = sec_axis(~ . * 0.3048 * 0.3048 / 0.293071072)) +
+#   scale_y_continuous("Median temperature difference when operating (°C, right: °F)",
+#                       sec.axis = sec_axis(~ . * 1.8 +32 )) +
+#   labs(title="Sample of 9 buildings")
+
+
+p2 =
+  deltaT%>%
+  mutate(tag = as.numeric(as.character(tag))) %>% 
+  inner_join(design_deltaTs) %>% 
+  ungroup() %>% 
+  group_by(tag, system, bldg_type, design_deltaT, climate) %>% 
+  summarize(deltaT = quantile(deltaT, 0.5)) %>% 
+  ggplot(aes(x=design_deltaT, y= deltaT))+
+  geom_point(aes(color=system,shape=climate), size=3)+
+  geom_abline(slope=1,intercept=0, linewidth=1, color="darkgrey")+
+  # geom_abline(slope=0.5,intercept=0, linewidth=1, color="grey", linetype="dashed")+
+  expand_limits(x=0,y=0)+
+  geom_smooth(method="lm", formula = y ~ 0 + x, se=T) +
+  scale_x_continuous("Design temperature difference (°C, top: °F)",
+                     sec.axis = sec_axis(~ . * 1.8 +32 )) +
+  scale_y_continuous("Median temperature difference when operating (°C, right: °F)",
+                     sec.axis = sec_axis(~ . * 1.8 +32 )) + 
+  guides(color=guide_legend(title="System"),
+         shape=guide_legend(title="Climate"))
+
+
+# deltaT wrt hw load normalized to max
+p3 =
+deltaT%>%
+  drop_na(sup,ret,hw,area) %>% 
+  filter(tag %in% sample(tags_of_interest,9)) %>% 
+  filter(hw >0) %>%
+  group_by(tag)%>%
+  mutate(hw_n = hw/max(hw, na.rm=T))%>%
+  ungroup() %>% 
+  # view 
+  ggplot(aes(x=hw_n,y=deltaT,group=tag)) +
+  geom_smooth(data=. %>% 
+                group_by(tag) %>% 
+                filter(hw_n>quantile(hw_n,.025, na.rm=T) & hw_n<quantile(hw_n,.975, na.rm=T)),
+              se=F) + 
+  geom_point(data=. %>% group_by(tag) %>% slice_sample(n=300), alpha= 0.1, size=1) +
+  facet_wrap(paste(tag, org, system) ~ . , scales= "free_y") +
+  xlab("HW load normalized to maximum") +
+  scale_y_continuous("Median temperature difference when operating (°C, right: °F)",
+                      sec.axis = sec_axis(~ . * 1.8 +32 )) +
+  labs(title="Sample of 9 buildings")
+
+# deltaT wrt t_out
+# tags_of_interest = all%>%
+#   drop_na(sup,ret,t_out) %>%
+#   group_by(org) %>% 
+#   distinct(tag) %>%
+#   slice_sample(n=1) %>% .$tag
+# deltaT%>%
+#   drop_na(sup,ret,t_out) %>% 
+#   filter(tag %in% sample(tags_of_interest,9)) %>% 
+#   drop_na(t_out) %>%
+#   # view 
+#   ggplot(aes(x=t_out,y=deltaT,group=tag)) +
+#   geom_smooth(se=F) + 
+#   geom_point(data=. %>% group_by(tag) %>% slice_sample(n=300), alpha= 0.1, size=1) +
+#   facet_wrap(paste(tag, org, system) ~ . , scales= "free_y") +
+#   scale_x_continuous("Outdoor temperature (°C, top: °F)",
+#                       sec.axis = sec_axis(~ . * 1.8 +32 )) +
+#   scale_y_continuous("Median temperature difference when operating (°C, right: °F)",
+#                       sec.axis = sec_axis(~ . * 1.8 +32 )) +
+#   labs(title="Sample of 9 buildings")
+
+
+(p1 + p2)/ p3 + plot_layout(nrow = 2) +
+  plot_layout(nrow = 2, heights = c(1, 2.5)) +
+   plot_annotation(tag_levels = c('a'), tag_suffix = ')') & 
+   theme(plot.tag.position = c(0, 1),
+        plot.tag = element_text(color="darkred"))
+
+```
+
+
+## Return temperatures
+```{r returntempdata}
+# filter out buildings with condensing boilers, and data with valid return temps where the system is operating
+cb = all%>%
+  drop_na(ret,tag) %>% 
+  filter(system == "Condensing" & oper >0)
+
+num_cbs = length(unique(cb$tag))
+
+med_cb = cb%>%group_by(tag)%>%summarize(ret =median(ret))%>%ungroup()%>%summarize(median(ret))
+
+cond_threshold = 54
+num_lt_cond_threshold = cb %>%
+  group_by(tag) %>%
+  summarize(ret = median(ret)) %>%
+  filter(ret<cond_threshold)%>%
+  ungroup() %>%
+  summarize(n=n())
+
+num_lt_43 = cb %>%
+  group_by(tag) %>%
+  summarize(ret = median(ret)) %>%
+  filter(ret<43)%>%
+  ungroup() %>%
+  summarize(n=n())
+
+
+ret_eff_benefit = function(df){
+  df%<>%
+    # mutate(eff_gain = 1)
+    mutate(eff_gain = (cond_threshold-ret)*0.3)%>%
+    mutate(eff_gain = ifelse(eff_gain<0,0,eff_gain))
+  return(df)
+}
+
+# additionally filter for data with valid heating load
+cb_hw = cb %>%
+  drop_na(hw)
+
+num_cb_hw = length(unique(cb_hw$tag))
+
+cb_hw%<>%ret_eff_benefit()
+
+cb_hw%<>%
+  group_by(tag)%>%
+  mutate(hw_n = hw/max(hw, na.rm=T))%>%
+  ungroup()
+
+cb_hw_weighted = cb_hw%>%
+  group_by(tag)%>%
+  summarize(weighted_eff_gain = sum(hw_n*eff_gain)/sum(hw_n), unweighted_eff_gain = mean(eff_gain)) %>% 
+  mutate(ratio_weighted_to_unweighted = weighted_eff_gain/unweighted_eff_gain) %>% 
+  ungroup() 
+
+```
+The return water temperature is another key aspect of performance of HHW systems, particularly those with condensing boilers where it directly affects heating equipment efficiency. In this section we only analyze the `r num_cbs` systems where the metadata indicates it is a condensing model because systems with non-condensing boilers should avoid low return temperature (to avoid damage due to corrosive condensate), and buildings served by district systems may have less incentive to reduce return water temperatures than those with dedicated heating equipment.
+
+<!-- The previous section shows a generally observed trend of increasing supply and return temperature difference with increasing load (or decreasing outdoor temperature), which helps reduce retrun water temperatures. However, the supply temperature tends to be higher at higher loads, which has the oppostie effect.  -->
+ 
+Figure \@ref(fig:returntempfigs)) shows the distribution of return temperatures for each HHW system that has a condensing gas boiler, illustrating that the buildings in this dataset see relatively little benefit from operating at condensing temperatures. The median building (ranked by median return temperature) with a condensing boiler has a median return temperature during operating hours of `r signif(cb %>% group_by(tag)%>% summarize(mr = median(ret))%>%summarize(median(mr)),3)`. For context, `r cond_threshold` °C is the return temperature at which flue gases start to condense, improving boiler efficiency [@catievanwormerBestPracticesCondensing2018].  Only `r num_lt_cond_threshold` of `r num_cbs` systems with condensing boilers spend more than half of operating hours operating at temperatures that cause condensing. Additionally, very few buildings spend any substantial amount of time operating at temperatures where there are substantial efficiency gains from condensing. Only `r num_lt_43` buildings operate at least half of time at return temperatures below 43 °C. This is the temperature at which approximately half of the maximum efficiency benefit from condensing operation occurs, corresponding to an increase of approximately 6% in nominal boiler input efficiency.
+
+The absolute energy savings from operating in condensing mode depends on the return temperature, the load handled by the boiler, and the amount of time it operates under those conditions. For example, if a boiler operates half the year at lower return temperatures and higher loads, this will increase annual energy savings above the median value of the efficiency gain. However, it is equally true that where a boiler operates at high load and relatively low return temperatures for a small fraction of the year, and operates at high return temperatures and low loads for the vast majority of the time, then the limited amount of time spent at that those high load hours may have limited effect on the overall energy savings. 
+
+
+```{r returntempfigs, fig.cap='Overview of return temperatures', fig.width=7.5, fig.height=10}
+p1 = cb %>% 
+  ggplot(aes(x=ret,y=reorder(tag,ret,median))) +
+  geom_violin(aes(fill=climate),scale = "width", draw_quantiles = c(0.1,0.25, 0.5, 0.75, 0.9)) +
+  # geom_boxplot(aes(fill=climate), outlier.shape=3, outlier.size = 0.5, outlier.alpha = 0.2) +
+  # geom_boxplot(aes(fill=climate), outlier.shape=NA) +
+  scale_x_continuous("Return temperature, \u00B0C") +
+  geom_vline(xintercept =0, color="grey", linetype = "dashed") +
+  # facet_wrap(season~system, scales="free_y") +
+  geom_vline(xintercept =54, color="lightblue", linetype = "dashed") +
+  geom_vline(xintercept =43, color="lightblue", linetype = "dashed") +
+  # labs(title="Return temperature distribution",
+  #      subtitle = "",
+  #      caption = "Subset: operating hours only.\n
+  #      Lines in violin plots indicate 25th, 50th and 75th %iles") +
+  labs(fill="Climate") +
+  ylab("Anonymized building #") 
+
+# Distribution curves showing return temperature, colored by building type for buildings with a condensing boiler. Data filtered to show only operating hours. Dashed, light blue vertical lines at 54 °C (temperature at which there is a measurable improvement to efficiency from condensing operation) and 43 °C (temperature at which approximately half of the maximum possible efficiency gain from condensing operation occurs). 
+
+p2 = all%>%
+  drop_na(ret,tag,system,oper) %>% 
+  filter(oper >0) %>% 
+  group_by(tag,system) %>%
+  summarize(ret = median(ret)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x=system,y=ret)) +
+  geom_violin(draw_quantiles = c(0.1,0.25, 0.5, 0.75, 0.9)) +
+  xlab("HHW system type") +
+  ylab("Median return temperature for each building (°C)")
+
+tags_of_interest = hws_no_nas %>%
+  drop_na(ret) %>% 
+  filter(system == "Condensing") %>% 
+  inner_join(md %>% select(tag,bldg_type_hl)) %>% 
+  select(tag,bldg_type_hl) %>%
+  distinct %>% 
+  group_by(bldg_type_hl) %>% 
+  slice_sample(n=10) %>% 
+  distinct() %>% .$tag
+p3 =
+  cb_hw%>%
+  filter(oper>0) %>% 
+  filter(tag %in% tags_of_interest)%>%
+  group_by(tag) %>% 
+  mutate(hw_frac_total = hw_n/sum(hw_n),
+         binned = round(ret,0))%>%
+    mutate(tag = as.numeric(as.character(tag))) %>% 
+  inner_join(md %>% select(tag,bldg_type_hl)) %>% 
+  group_by(tag,bldg_type_hl,binned) %>% 
+  arrange(tag,binned) %>% 
+  summarize(hw_served = sum(hw_frac_total)) %>%
+  mutate(cumul_hw_served = cumsum(hw_served)) %>% 
+  # view
+  ggplot(aes(x=binned, y= cumul_hw_served, group=tag))+
+  geom_line()+
+  facet_wrap(.~bldg_type_hl, scales= "free_x") +
+  geom_vline(xintercept = 54, linetype="dashed", color="darkgrey")+
+  # xlab("Heating load per floor area (W/m²)") +
+  scale_x_continuous("Return temperature (°C, top: °F)", 
+                           sec.axis = sec_axis(~ . * 1.8 +32 )) +
+  ylab("Fraction of total load served") +
+  labs(title="Up to 10 randomly sampled buildings per building type, condensing boilers only")
+
+p1 / p3 + plot_layout(nrow = 2) +
+   plot_annotation(tag_levels = c('a'), tag_suffix = ')') & 
+   theme(plot.tag.position = c(0, 1),
+        plot.tag = element_text(color="darkred"))
+
+```
+
+The dataset contains `r num_cb_hw` buildings where supply and return water temperature, and flow rate are available. For this subset, we can weight the return temperatures by measured load served. We estimate the efficiency gain due to operating at condensing return temperatures using a simple model where there is a 0.3 % increase in nominal efficiency for every degree the return water temperature is below 54 °C. Figure \@ref(fig:returntempfigs) illustrates the distribution of this efficiency gain for each HHW in this subset. Additionally we calculate the average efficiency gain for each HHW system by weighting the measured heating load by the efficiency gain at each interval, and found that the median system achieved an increase of `r percent_format(accuracy=.1)(median(cb_hw_weighted$weighted_eff_gain/100))` in nominal efficiency due to operating at return temperatures low enough to benefit from condensing. Note we do not account for the effect of part load on efficiency as the boiler capacity was not available for sufficient sites to do so.
+
+[TODO: Correct to use retp, primary return temp, where available vs secondary return temp. Compare at primary vs secondary return temps where available. Highlight case (or more than one) where min flow rate req kicks in.]
+
+[TODO: Consider using a more accurate model than simple linear with return temp for condensing efficiency gain - though that would perform even worse for most buildings...]
+
+
+```{r efficiencyfigs, fig.cap= "Condensing boiler efficiency figures", fig.width=7.5, fig.height=10}
+p1 = cb_hw%>%
+  ggplot(aes(x=eff_gain,y=reorder(tag,eff_gain,median))) +
+  geom_boxplot(aes(fill=climate), outlier.shape=NA, outlier.size = NA) +
+  labs(fill="Climate") +
+  xlab("Percent efficiency gain from operating at condensing temperatures (not weighted by load)") +
+  ylab("Anonymized building #") 
+
+p2 = cb_hw_weighted%>% 
+  ggplot(aes(x=weighted_eff_gain)) +
+  geom_histogram(binwidth=0.25, fill="#0070C0", color="black")  +
+  xlab("Increase in efficiency due to condensing operation\nweighted by measured boiler load (% nominal efficiency)") +
+  ylab("# of buildings")
+
+tags_of_interest = 
+  cb_hw %>% 
+  select(tag) %>% 
+  distinct() %>% 
+  ungroup() %>% 
+  # group_by(climate) %>% 
+  slice_sample(n=9) %>%.$tag
+  
+p3 =
+  cb_hw %>%
+  # head(50000) %>%
+  group_by(tag) %>%
+  filter(tag %in% tags_of_interest) %>%
+  ggplot(aes(x=hw_n,y=ret))+
+  geom_point(data=. %>% group_by(tag) %>% slice_sample(n=500), size= 0.5, alpha=0.1)+
+  geom_smooth(data=. %>% 
+                group_by(tag) %>% 
+                filter(hw_n>quantile(hw_n,.025, na.rm=T) & hw_n<quantile(hw_n,.975, na.rm=T)),
+              se=F) + 
+  facet_wrap(paste(tag, org, system) ~ . , scales= "free_y") +
+  xlab("Hot water load normalized to max") +
+  ylab("Return temperature") +
+  theme(legend.position = "none")
+
+(p1 + p2) /p3 + plot_layout(nrow = 2) +
+   plot_annotation(tag_levels = c('a'), tag_suffix = ')') & 
+   theme(plot.tag.position = c(0, 1),
+        plot.tag = element_text(color="darkred"))
+
+```
+
+## Flow rates
+``` {r flowdata}
+flws = all %>% 
+  drop_na(flow) %>% 
+  filter(oper>0)
+
+n_flws = flws %>% distinct(tag) %>% nrow
+
+```
+
+Measured HHW flow  was available for over half of the systems (`r n_flws` of `r nrow(md)`) in this dataset. The median flow rate of the median system was `r flws%>%summarize(median(flow))` l/s when operating, with half of systems having a median supply temperature between `r flws%>%summarize(quantile(flow, 0.25))` and `r flws%>%summarize(quantile(flow, 0.75))` l/s. Normalized by building floor area, these values are `r flws%>%summarize(1000*median(flow/area, na.rm=T))`, `r flws%>%summarize(quantile(1000*flow/area, 0.25, na.rm=T))` and `r flws%>%summarize(1000*quantile(flow/area, 0.75, na.rm=T))` µm/s respectively. Figure \@ref(fig:returntempfigs)) visualizes the distribution  of flow rates normalized to building floor area, as well as the relationship between outdoor temperature and flow for a sample of buildings.
+
+There is generally a negative correlation between outdoor temperature and flow for most systems, but many systems show a relatively little variation in flow rate, or bimodal distributions that indicate a change of control strategy, operator override, flow meter calibration, or other major change to system flow rates occurred within the data. Most of the increase in HHW system output at lower outdoor temperatures is due to increasing temperature difference between supply and return than increase in flow rates. 
+
+``` {r flowfigs, fig.cap="Flow rate figures", fig.width=7.5, fig.height=10}
+p1 =
+  flws %>% 
+    drop_na(area) %>%
+    mutate(tag=as.numeric(as.character(tag))) %>% 
+    inner_join(md%>%select(tag,bldg_type_hl)) %>% 
+    group_by(tag,area,bldg_type_hl) %>% 
+    filter(max(flow)/area < 0.0025) %>% 
+    summarize(var = 1000*median(flow/area)) %>% 
+    ggplot(aes(x=bldg_type_hl, y=var, color=bldg_type_hl)) +
+    # geom_violin() +
+    scale_y_continuous("Median flow per area \n(µm/s, right: gpm/thousand.ft²)",
+                       sec.axis = sec_axis(~ . * 0.3048 * 0.3048 / 0.0630901964)) +
+    geom_boxplot(outlier.shape=NA)  + 
+    geom_jitter()
+    
+
+p2 = 
+  flws %>% 
+    drop_na(area) %>% 
+    group_by(tag,area) %>% 
+    summarize(mx = max(flow),
+              md = median(flow)) %>%
+    mutate(mx = mx/area,
+           md = md/area) %>% 
+    mutate(outlier = ifelse(mx > 0.2, T,F)) %>% 
+    filter(!outlier) %>% 
+    ggplot(aes(x=mx)) +
+    geom_histogram(bins = 100)
+
+tags_of_interest = 
+  flws %>% 
+  distinct(tag) %>%
+  slice_sample(n=9) %>%.$tag
+p3 =
+  flws %>% 
+    drop_na(area, hw) %>% 
+    filter(tag %in% tags_of_interest) %>% 
+    group_by(tag,area) %>% 
+    filter(max(flow)/area < 0.1) %>% 
+    mutate(hw_n = hw/max(hw)) %>% 
+    ggplot(aes(x=hw_n, y=1000*flow/area)) +
+    geom_point(data=. %>% group_by(tag) %>% slice_sample(n=500), size= 0.5, alpha=0.1)+
+    geom_smooth(data=. %>% 
+                  group_by(tag) %>% 
+                  filter(hw_n>quantile(hw_n,.025, na.rm=T) & hw_n<quantile(hw_n,.975, na.rm=T)),
+                se=F) + 
+    facet_wrap(paste(tag, org, bldg_type, system) ~ . , scales= "free_y") +
+    xlab("Hot water load normalized to max") +
+      scale_y_continuous("Flow per area \n(µm/s, right: gpm/thousand.ft²)",
+                     sec.axis = sec_axis(~ . * 0.3048 * 0.3048 / 0.0630901964))+
+    theme(legend.position = "none")
+  
+p4 =
+    flws %>% 
+    drop_na(area, t_out) %>% 
+    filter(tag %in% tags_of_interest) %>% 
+    group_by(tag,area) %>% 
+    filter(max(flow)/area < 0.1) %>% 
+    # mutate(hw_n = hw/max(hw)) %>% 
+    ggplot(aes(x=t_out, y=1000*flow/area)) +
+    geom_point(data=. %>% group_by(tag) %>% slice_sample(n=500), size= 0.5, alpha=0.1)+
+    geom_smooth(data=. %>% 
+                  group_by(tag) %>% 
+                  filter(t_out>quantile(t_out,.025, na.rm=T) & t_out<quantile(t_out,.975, na.rm=T)),
+                se=F) + 
+    facet_wrap(paste(tag, org, bldg_type, system) ~ . , scales= "free") +
+    scale_x_continuous("Outdoor temperature (°C, top: °F)", 
+                           sec.axis = sec_axis(~ . * 1.8 +32 )) +
+    scale_y_continuous("Flow per area \n(µm/s, right: gpm/thousand.ft²)",
+                     sec.axis = sec_axis(~ . * 0.3048 * 0.3048 / 0.0630901964))+
+    theme(legend.position = "none") 
+  
+
+(p1 + p2) / p3 /p4 + plot_layout(nrow = 3) +
+  plot_layout(nrow = 3, heights = c(1, 2,2)) +
+  plot_annotation(tag_levels = c('a'), tag_suffix = ')') & 
+  theme(plot.tag.position = c(0, 1),
+        plot.tag = element_text(color="darkred"))
+
+  
+```
+
+## Additional timeseries data
+``` {r otherdata}
+# todo confirm datetimes are aligned correctly.
+# create a df of sites with both return primary and secondary temps.
+retp =
+  anc%>%
+  filter(variable == "retp") %>%
+  drop_na(value) %>% 
+  group_by(tag) %>% 
+  # slice_sample(n=10) %>% 
+  pivot_wider(names_from=variable, values_from = value) %>% 
+  mutate(datetime_hourly = round_date(datetime, "1 hour"))%>%
+  group_by(tag, datetime, retp) %>% 
+  summarize(retp=(mean(retp))) %>% 
+  ungroup()
+
+retp_tags = retp %>% distinct(tag) %>% .$tag
+
+rp =
+  all %>% 
+  filter(tag %in% retp_tags) %>% 
+  inner_join(retp) %>% 
+  mutate(ret_dT = retp-ret)
+
+# create a df of sites with gas data
+gasd =
+  anc%>%
+  filter(variable == "gas" | variable == "gas_u") %>%
+  drop_na(value) %>% 
+  group_by(tag) %>% 
+  distinct() %>% 
+  pivot_wider(names_from="variable", values_from = "value") %>% 
+  mutate(datetime_hourly = round_date(datetime, "1 hour"))%>%
+  group_by(tag, datetime) %>% 
+  summarize_if(is.numeric, mean) %>% 
+  ungroup()
+
+gasd_tags = gasd %>% distinct(tag) %>% .$tag
+
+gas =
+  all %>% 
+  filter(tag %in% gasd_tags) %>% 
+  inner_join(gasd) %>% 
+  mutate(gas = ifelse(is.na(gas),gas_u,gas)) # assume utility metered gas has not other end-use than boilers
+
+# # create a df of sites with pmp_power
+# pwrd =
+#   anc%>%
+#   filter(variable == "pmp1_pwr" | variable == "pmp2_pwr") %>%
+#   drop_na(value) %>% 
+#   group_by(tag) %>% 
+#   distinct() %>% 
+#   pivot_wider(names_from="variable", values_from = "value") %>% 
+#   mutate(datetime_hourly = round_date(datetime, "1 hour"))%>%
+#   group_by(tag, datetime) %>% 
+#   summarize_if(is.numeric, mean) %>% 
+#   ungroup()
+# 
+# pwrd_tags = pwrd %>% distinct(tag) %>% .$tag
+# 
+# pwr =
+#   all %>% 
+#   filter(tag %in% pwrd_tags) %>% 
+#   inner_join(pwrd) %>% 
+#   mutate(pwr_tot = pmp1_pwr + pmp2_pwr)
+# 
+# # create a df of sites with pmp vfd
+# vfdd =
+#   anc%>%
+#   filter(variable == "pmp1_vfd" | variable == "pmp2_vfd") %>%
+#   drop_na(value) %>% 
+#   group_by(tag) %>% 
+#   distinct() %>% 
+#   pivot_wider(names_from="variable", values_from = "value") %>% 
+#   mutate(datetime_hourly = round_date(datetime, "1 hour"))%>%
+#   group_by(tag, datetime) %>% 
+#   summarize_if(is.numeric, mean) %>% 
+#   ungroup()
+# 
+# vfdd_tags = vfdd %>% distinct(tag) %>% .$tag
+# 
+# vfd =
+#   all %>% 
+#   filter(tag %in% vfdd_tags) %>% 
+#   inner_join(vfdd)
+# 
+# # create a df with pmp speeds 
+# spdd =
+#   anc %>%
+#   filter(str_detect(variable, "spd")) %>% 
+#   drop_na(value) %>% 
+#   distinct() %>%
+#   filter(!(datetime > "2020-10-31 00:00:00" & datetime < "2020-11-02 00:00:00" & tag == 275)) %>% #todo temporary duplicate removal
+#   # dplyr::group_by(datetime, tag, variable) %>%
+#   # dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
+#   # dplyr::filter(n > 1L) %>% view
+#   pivot_wider(names_from="variable", values_from = "value") %>% 
+#   group_by(tag) %>% 
+#   mutate(datetime_hourly = round_date(datetime, "1 hour"))%>%
+#   group_by(tag, datetime) %>% 
+#   summarize_if(is.numeric, mean) %>% 
+#   ungroup()
+# 
+# spdd_tags = spdd %>% distinct(tag) %>% .$tag
+# 
+# spd =
+#   all %>% 
+#   filter(tag %in% spdd_tags) %>% 
+#   inner_join(spdd)
+# 
+# # create a df of sites with dp
+# dpd =
+#   anc%>%
+#   filter(variable == "dp" | variable == "dp_stpt") %>%
+#   drop_na(value) %>% 
+#   group_by(tag) %>% 
+#   distinct() %>% 
+#   pivot_wider(names_from="variable", values_from = "value") %>% 
+#   mutate(datetime_hourly = round_date(datetime, "1 hour"))%>%
+#   group_by(tag, datetime) %>% 
+#   summarize_if(is.numeric, mean) %>% 
+#   ungroup()
+# 
+# dpd_tags = dpd %>% distinct(tag) %>% .$tag
+# 
+# dpd =
+#   all %>% 
+#   filter(tag %in% dpd_tags) %>% 
+#   inner_join(dpd)
+# 
+# # create a df with firing rates (not averaged)
+# fired =
+#   anc %>%
+#   filter(str_detect(variable, "fire")) %>% 
+#   drop_na(value) %>% 
+#   group_by(tag) %>% 
+#   distinct() %>% 
+#   pivot_wider(names_from="variable", values_from = "value") %>% 
+#   ungroup()
+# 
+# fired_tags = fired %>% distinct(tag) %>% .$tag
+# 
+# # average hourly to join with main dataset
+# fire =
+#   all %>% 
+#   filter(tag %in% fired_tags) %>% 
+#   inner_join(fired %>% 
+#                mutate(datetime_hourly = round_date(datetime, "1 hour"))%>%
+#                group_by(tag, datetime) %>% 
+#                summarize_if(is.numeric, mean) %>% 
+#                ungroup()
+#              )
+#     
+#     
+# # exploratory
+# anc%>% 
+#   ungroup() %>% 
+#   drop_na(value) %>% 
+#   # filter(variable == "dp") %>%
+#   # filter(variable == "dp_stpt") %>%
+#   # filter(variable == "dp" | variable == "dp_stpt") %>%
+#   # filter(variable == "pmp1_vfd" | variable == "pmp2_vfd") %>%
+#   # filter(variable == "pmp1_pwr" | variable == "pmp2_pwr") %>%
+#   # filter(variable == "pmp1_spd" | variable == "pmp2_spd") %>%
+#   filter(str_detect(variable, "fire")) %>%
+#   # filter(variable == "gas" | variable == "gas_u") %>%
+#   # filter(variable == "retp") %>%
+#   distinct() %>% 
+#   filter(variable=="fire1") %>% 
+#   group_by(tag) %>% 
+#   slice_sample(n=10000) %>%
+#   # filter(abs(value-mean(value)) < 10*sd(value)) %>% # crude extreme outlier removal
+#   mutate(value = (value-min(value))/(max(value)-min(value))) %>% #min/max range normalized
+#   # filter(value > 0) %>% 
+#   # filter(value< 2) %>%
+#   # ggplot(aes(factor(tag), value)) +
+#   # geom_violin()
+#   # geom_boxplot() 
+#   ggplot(aes(x=value)) +
+#   geom_histogram(bins=50) + facet_wrap(.~tag, scales= "free_y")
+# # + geom_jitter(data=. %>% group_by(tag) %>% slice_sample(n=100))
+
+```
+As noted above, there are a range of additional variables present in the data but only for a small number of sites. 
+
+(TODO to discuss - Misc options for what to show here: 
+difference between primary return temp and building temp (7 buildings), could move to return temp section
+
+gas at boiler or utility (17 bldgs), individual boiler inlet/outlet temps (19 bldgs)
+
+pump speed or vfd/ freq (59 bldgs. vfd 8 of 13 total are pretty constant), pmp speed data shows similar, relatively little change in pump speeds. evidence of manual override to nex fixed setpoint.
+
+fire rate for 36 bldgs. can look at cycles per day. median boiler cycles on twice per day. quarter boilers cycle on 4 times per day or more 
+
+pmp_power (10 buildings)
+
+EOL DP with setpoint (19 bldgs)
+)
+
+(TODO Specifically look for low PLR operating conditions to highlight the efficiency penalty for boiler, if it shows up in data)
+
+
+``` {r otherdatafigs, fig.cap = "Ancilliary data figures", fig.width=7.5, fig.height=10}
+# rp %>% 
+#   ggplot(aes(y=ret_dT, x=t_out)) +
+#   geom_point(data=. %>% group_by(tag) %>% slice_sample(n=500), size= 0.5, alpha=0.1)+
+#   geom_smooth(data=. %>% 
+#                 group_by(tag) %>% 
+#                 filter(t_out>quantile(t_out,.025, na.rm=T) & t_out<quantile(t_out,.975, na.rm=T)),
+#               se=F) + 
+#   facet_wrap(paste(tag, org, system) ~ . , scales= "free") +
+#   # scale_x_continuous("Outdoor temperature (°C, top: °F)", 
+#   #                     sec.axis = sec_axis(~ . * 1.8 +32 )) +
+#   # scale_y_continuous("Flow per area \n(µm/s, right: gpm/thousand.ft²)",
+#   #                    sec.axis = sec_axis(~ . * 0.3048 * 0.3048 / 0.0630901964))+
+#   theme(legend.position = "none") 
+# 
+# rp %>% 
+#   drop_na(hw) %>% 
+#   group_by(tag) %>% 
+#   mutate(hw_n= hw/max(hw, na.rm=T)) %>% 
+#   ggplot(aes(y=ret_dT, x=hw_n)) +
+#   geom_point(data=. %>% group_by(tag) %>% slice_sample(n=500), size= 0.5, alpha=0.1)+
+#   geom_smooth(data=. %>% 
+#                 group_by(tag) %>% 
+#                 filter(hw_n>quantile(hw_n,.025, na.rm=T) & hw_n<quantile(hw_n,.975, na.rm=T)),
+#               se=F) + 
+#   facet_wrap(paste(tag, org, system) ~ . , scales= "free") +
+#   # scale_x_continuous("Outdoor temperature (°C, top: °F)", 
+#   #                     sec.axis = sec_axis(~ . * 1.8 +32 )) +
+#   # scale_y_continuous("Flow per area \n(µm/s, right: gpm/thousand.ft²)",
+#   #                    sec.axis = sec_axis(~ . * 0.3048 * 0.3048 / 0.0630901964))+
+#   theme(legend.position = "none") 
+
+p1 = rp %>% 
+  drop_na(flow) %>% 
+  group_by(tag) %>% 
+  mutate(flow_n= flow/max(flow, na.rm=T)) %>% 
+  ungroup() %>% 
+  filter(flow_n >=0.05) %>% 
+  ggplot(aes(y=ret_dT, x=flow_n)) +
+  geom_point(data=. %>% group_by(tag) %>% slice_sample(n=500), size= 0.5, alpha=0.1)+
+  geom_smooth(data=. %>% 
+                group_by(tag) %>% 
+                filter(flow_n>quantile(flow_n,.025, na.rm=T) & flow_n<quantile(flow_n,.975, na.rm=T)),
+              se=F) + 
+  facet_wrap(paste(tag, org, system) ~ . , scales= "free") +
+  scale_y_continuous("Primary return temperature minus building return temperature (°C, right: °F)",
+                      sec.axis = sec_axis(~ . * 1.8)) +
+  xlab("Flow normalized to max")+
+  theme(legend.position = "none") +
+    labs(title="Sites with measured primary and secondary return temperatures")
+
+
+p2 = gas %>% 
+  filter(oper>0) %>% 
+  group_by(tag, bldg_type, system) %>%
+  drop_na(gas,hw,area) %>% 
+  summarize(gmd = median(gas/area, na.rm=T), hwmd = median(hw/area, na.rm=T),
+            gmn = mean(gas/area, na.rm=T), hwmn = mean(hw/area, na.rm=T)) %>%
+  # filter(tag != 316 | tag != 91) %>% 
+  mutate(high_load_site = ifelse(gmn >25,"Mean gas load > 25","Mean gas load <= 25")) %>% 
+  mutate(efficiency =  hwmn/gmn) %>% 
+  mutate(reasonable_range = ifelse(efficiency >=4 | efficiency <= 0.25,F,T)) %>%
+  ggplot(aes(x=gmn, y=hwmn)) +
+  geom_abline(intercept = 0, slope = 1) +
+  geom_abline(intercept = 0, slope = 0.9, linetype="dotted") +
+  geom_abline(intercept = 0, slope = 0.8, linetype="dotted") +
+  geom_abline(intercept = 0, slope = 0.7, linetype="dotted") +
+  geom_abline(intercept = 0, slope = 0.6, linetype="dotted") +
+  geom_point(aes(color=bldg_type, shape=reasonable_range)) +
+  geom_smooth(data=. %>% filter(reasonable_range), method = "lm", formula = y ~ x +0) +
+  scale_x_continuous("Mean hourly gas load per floor area (W/m², top: BTU/hr.ft²)",
+                     sec.axis = sec_axis(~ . * 0.3048 * 0.3048 / 0.293071072)) +
+  scale_y_continuous("Mean hourly HHW load\nper floor area\n(W/m², right: BTU/hr.ft²)",
+                     sec.axis = sec_axis(~ . * 0.3048 * 0.3048 / 0.293071072))+
+  labs(title="Sites with measured gas and HHW load",
+       caption="Linear fits only include data from sites where mean gas and load are within a factor of 4 of each other (i.e. 25% > efficiency < 400%") +
+  facet_wrap(high_load_site ~ ., scales= "free")
+
+
+p1/ p2 + plot_layout(nrow = 2) +
+  plot_layout(nrow = 2, heights = c(2, 1,2)) +
+  plot_annotation(tag_levels = c('a'), tag_suffix = ')') & 
+  theme(plot.tag.position = c(0, 1),
+        plot.tag = element_text(color="darkred"))
+  
+```
+
+## Prevalence of best practice design and controls
+(TODO. Test for existence of HWST reset wrt temperature or season (i.e., some reasonable negative correlation between HWST and OAT, e.g. at least 10-20F). Test for variation in plant operating hours based on temp, demand or season. Test for likely 2-way vs 3-way valves, or high bypass flows (high constant base flow, unchanging summer and winter). Test for boiler short cycling (either using the timeseries, or just the boiler size and hw load). Test for pump dp reset (or variable pump speed) (seems less critical))
+
+## Limitations of this dataset
+(TODO - sample of 'convenience', though large, not statistically representative of US building stock. Uses existing automation system data.)
+
+## Future research
+(TODO - consider making the case for a centrally managed database of public BAS data)
+
+# Conclusions
+(TODO) 
+V high level:
+Overall, data indicates many of the assumptions about how these systems operate in practice are not correct. There are substantial energy savings and first cost savings to be had.
+1. Operating hours far above expected.
+2. Loads are typically very low, with highly skewed distributions. Substantial resilience even with remaining capacity capable of serving just half of max measured load. Substanial potential for carbon reductions by partial electrification, particularly if electric heating equipment can operate in tandem with existing non-electric equipment.
+3. Systems are oversized for the loads encountered, typically by factor of two, even after accounting for redundancy requiremenets for the design (when known).
+4. Lots of systems not resetting supply temperatures at all, or optimally.
+5. High return temperatures yield relatively little benefit had from condensing operate in practice.
+
+# CRediT authorship contribution statement
+**Paul Raftery**: Conceptualization, Data curation, Formal analysis, Funding acquisition, Methodology, Investigation, Project administration, Software, Supervision, Writing - original draft, Writing - review & editing. **Rupam Singla** **Hwakong Cheng** **Gwelen Paliaga** [TODO contributions]
+
+# Declaration of competing interest
+All authors declare no competing interest.
+
+# Acknowledgements
+This research was supported by the California Energy Commission (CEC) PIER grant PIR-19-013, with cost share provided by the Center for the Built Environment at the University of California Berkeley. We would like to thank the many organizations who donated their building data to this dataset, and the people who kindly helped facilitate that process at each site.
+
+# References {#references .unnumbered}
