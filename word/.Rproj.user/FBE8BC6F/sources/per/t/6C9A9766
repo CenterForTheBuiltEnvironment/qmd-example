@@ -1,0 +1,26 @@
+{
+    "id": "6C9A9766",
+    "path": "~/GitHub/rmd-example/word/report.qmd",
+    "project_path": "report.qmd",
+    "type": "quarto_markdown",
+    "hash": "2726386844",
+    "contents": "",
+    "dirty": false,
+    "created": 1728509697246.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "29,73",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1728509590,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1728509590,
+    "read_only": false,
+    "read_only_alternatives": []
+}
