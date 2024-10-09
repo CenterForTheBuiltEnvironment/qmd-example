@@ -59,7 +59,7 @@ options(
 )
 
 # set directory
-here::i_am("report.qmd")
+here::i_am("example.qmd")
 
 
 # ## for example, theme minimal
