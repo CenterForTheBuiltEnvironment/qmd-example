@@ -40,6 +40,7 @@ require(pacman)
 # load packages using pacman
 pacman::p_load(
   tidyverse, lubridate, here, rmarkdown, scales, patchwork, magrittr, janitor, # general, commonly used
+  measurements, # most unit conversions 
   styler, # auto style your code with this addin
   # ggpubr, # ggplot extension focuses on annotations and fitted models
   # ggExtra, # ggplot extension handy for things like marginal density curves on figures
@@ -81,33 +82,38 @@ cal_palette4 <- c("#003262", "#b0750c", "#3b7ea1", "#fdb515")
 cal_palette5 <- c("#003262", "#b0750c", "#3b7ea1", "#fdb515", "#D9661F")
 ```
 
+```{r constants}
+# user defined constants specific to this analysis
+``` 
+
+
 ```{r functions}
 # user defined functions specific to this analysis
 ``` 
 
 ```{r dataprep, include = FALSE}
-# Read in data, misc initial prep/cleaning tasks
-# for example, list all the files in a folder that match a specific pattern (e.g. csv files)
-
-files <- list.files(path = "./input_file_folder/", pattern = "*.csv")
-
-# create a short function to read in those files one by one
-# modify those files after you read them in,
-# and return a dataframe
-read_and_append_file <- function(fle) {
-  df <- read_csv(str_c("./input_file_folder/", fle))
-  # do whatever individual file level modifications you need here
-  # for example, extract some string from the filename
-  sss <- str_extract(string = fle, pattern = "(?<=df_).*(?=_USA_Clima)")
-  df %<>% mutate(sourcefilename = fle, stringofinterest = sss)
-  return(df)
-}
-
-# apply that function and return an assembled dataframe
-df <- files %>% map_dfr(read_and_append_file)
-
-# apply functions to tidy up the dataframe as necessary
-df %<>% clean_names()
+# # Read in data, misc initial prep/cleaning tasks
+# # for example, list all the files in a folder that match a specific pattern (e.g. csv files)
+# 
+# files <- list.files(path = "./input_file_folder/", pattern = "*.csv")
+# 
+# # create a short function to read in those files one by one
+# # modify those files after you read them in,
+# # and return a dataframe
+# read_and_append_file <- function(fle) {
+#   df <- read_csv(str_c("./input_file_folder/", fle))
+#   # do whatever individual file level modifications you need here
+#   # for example, extract some string from the filename
+#   sss <- str_extract(string = fle, pattern = "(?<=df_).*(?=_USA_Clima)")
+#   df %<>% mutate(sourcefilename = fle, stringofinterest = sss)
+#   return(df)
+# }
+# 
+# # apply that function and return an assembled dataframe
+# df <- files %>% map_dfr(read_and_append_file)
+# 
+# # apply functions to tidy up the dataframe as necessary
+# df %<>% clean_names()
 ```
 
 # Abstract {.unnumbered}
