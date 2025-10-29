@@ -155,8 +155,9 @@ weird_iris %<>%
 
 The mean species length of the modified iris dataset is `r mean(weird_iris$Sepal.Length)`.
 
+
 ### Third level heading
-Here's how you cross reference a figure \@ref(fig:yourfignamehere), or a table \@ref(tab:yourtablenamehere) or a section. This is how you include a footnote[^1].
+Here's how you cross reference a figure \@ref(fig:yourfignamehere), or a table \@ref(tab:yourtablenamehere) or a section. This is how you include a footnote[^1]. 
 
 [^1]: Your footnote text goes here. It can go anywhere in the .qmd file but it seems easiest to put it at the end of the paragraph where the footnote is first included.
 
@@ -209,11 +210,12 @@ are even more symbols here: https://en.wikipedia.org/wiki/Unicode_block. Also, t
 # Aiding the review process
 Though the output is a formatted Word file, the review process is still a bit 
 clunky. I generally turn on track changes and send to co-authors for review. 
-Then you manually bring those changes back into the .qmd file.  
-Sometimes it's handy to add a 
-[That way you can comment on why something was done a particular way, 
+Then you manually bring those changes back into the .qmd file. Sometimes it's 
+handy to add a [That way you can comment on why something was done a particular way, 
 or propose an alternate, etc.,and folks can respond 
-in that thread]{.comment-start id="0" author="The Flying Spahetti Monster" date="2300-01-01T10:12:00Z"}comment in the actual Word file output.[]{.comment-end id="0"} 
+in that thread]{.comment-start id="0" author="The Flying Spaghetti Monster" date="2300-01-01T10:12:00Z"}comment in the actual Word file output[]{.comment-end id="0"}. For comments to readers familiar with markdown, you can add comments in the markdown document itself, either in the body text (see example below in the markdown doc) or in individual R chunks (see any code chunk in the markdown document).
+
+<!-- This is an example comment in markdown. -->
 
 # CRediT authorship contribution statement {.unnumbered}
 **Author1Name**: Conceptualization, Data curation, Formal analysis,
